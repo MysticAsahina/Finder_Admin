@@ -55,12 +55,12 @@ export default function Messages() {
           </div>
         </div>
         <div className="msg-body">
-          <div>
+          <div className="msg-wrapper in">
             <div className="bubble in">{selected?.content}</div>
             <div className="bubble-time">{selected?.time}</div>
           </div>
           {replies.map((r, i) => (
-            <div key={i} style={{ alignSelf:'flex-end' }}>
+            <div key={i} className="msg-wrapper out">
               <div className="bubble out">{r}</div>
               <div className="bubble-time out-time">Just now</div>
             </div>

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Sidebar from './components/Sidebar'
 import Topbar from './components/Topbar'
 import LoginPage from './pages/LoginPage'
+import OtpPage from './pages/OtpPage'
 import Dashboard from './pages/Dashboard'
 import Analytics from './pages/Analytics'
 import Drivers from './pages/Drivers'
@@ -25,7 +26,7 @@ const PAGE_MAP = {
 }
 
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [authStep, setAuthStep] = useState('login') // 'login', 'otp', 'authenticated'
   const [activePage, setActivePage] = useState('dashboard')
 
   const handleLogin = async (email, password, role) => {
@@ -38,30 +39,45 @@ export default function App() {
 
       const data = await res.json();
 
+
       if (!res.ok) {
         console.log(data)
         // Uncomment the code below to ignore login for now, comment to NOT ignore
-        setIsLoggedIn(true);
+        setAuthStep('otp');
         return;
       }
 
-      setIsLoggedIn(true);
+      setAuthStep('otp');
 
     } catch (err) {
       console.error(err);
+      // Proceed to OTP step even if backend is not running, to allow frontend testing
+      setAuthStep('otp');
     }
   }
 
+  const handleOtpVerify = () => {
+    setAuthStep('authenticated');
+  };
+
+  const handleOtpBack = () => {
+    setAuthStep('login');
+  };
+
   const handleLogout = () => {
     if (window.confirm('Are you sure you want to log out?')) {
-      setIsLoggedIn(false)
+      setAuthStep('login')
     }
   }
 
   const ActivePage = PAGE_MAP[activePage] || Dashboard
 
-  if (!isLoggedIn) {
+  if (authStep === 'login') {
     return <LoginPage onLogin={handleLogin} />
+  }
+
+  if (authStep === 'otp') {
+    return <OtpPage onVerify={handleOtpVerify} onBack={handleOtpBack} />
   }
 
   return (

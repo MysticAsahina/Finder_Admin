@@ -25,7 +25,7 @@ export default function LoginPage({ onLogin }) {
         </div>
 
         <div className="login-card">
-          <div className="logo-text" style={{ fontSize:'2.2rem', marginBottom:40, display:'block', textAlign:'center' }}>
+          <div className="logo-text" style={{ fontSize: '2.2rem', marginBottom: 40, display: 'block', textAlign: 'center' }}>
             FIND<span>ER</span>
           </div>
 
@@ -39,10 +39,10 @@ export default function LoginPage({ onLogin }) {
               <label className="login-label">Email</label>
               <div className="login-input-wrap">
                 <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                  <polyline points="22,6 12,13 2,6"/>
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                  <polyline points="22,6 12,13 2,6" />
                 </svg>
-                <input type="email" className="login-input" onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" defaultValue={defaultEmail} required/>
+                <input type="email" className="login-input" onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" defaultValue={defaultEmail} required />
               </div>
             </div>
 
@@ -50,16 +50,16 @@ export default function LoginPage({ onLogin }) {
               <label className="login-label">Password</label>
               <div className="login-input-wrap">
                 <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                  <path d="M7 11V7a5 5 0 0110 0v4"/>
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0110 0v4" />
                 </svg>
-                <input type="password" className="login-input" onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" defaultValue={defaultPassword} required/>
+                <input type="password" className="login-input" onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" defaultValue={defaultPassword} required />
               </div>
             </div>
 
             <div className="login-options">
               <label className="remember-me">
-                <input type="checkbox" defaultChecked/>
+                <input type="checkbox" defaultChecked />
                 Remember Me
               </label>
               <button type="button" className="forgot-pass" onClick={() => setResetOpen(true)}>
