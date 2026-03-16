@@ -28,6 +28,7 @@ const PAGE_MAP = {
 export default function App() {
   const [authStep, setAuthStep] = useState('login') // 'login', 'otp', 'authenticated'
   const [activePage, setActivePage] = useState('dashboard')
+  const [pendingToken, setPendingToken] = useState(null)
 
   const handleLogin = async (email, password, role) => {
     try {
@@ -39,45 +40,60 @@ export default function App() {
 
       const data = await res.json();
 
-
       if (!res.ok) {
-        console.log(data)
-        // Uncomment the code below to ignore login for now, comment to NOT ignore
-        setAuthStep('otp');
+        console.log(data.message)
         return;
       }
 
+      // For OTP bypass, remove/comment out otherwise
+      const token = data.token;
+
+      // Store the pending token so OtpPage can use it
+      // setPendingToken(data.pendingToken);
+      localStorage.setItem('token', token);
       setAuthStep('otp');
 
     } catch (err) {
       console.error(err);
-      // Proceed to OTP step even if backend is not running, to allow frontend testing
-      setAuthStep('otp');
     }
   }
 
-  const handleOtpVerify = () => {
+  const handleOtpVerify = (token) => {
+    // Swap the pending token for the real access token
+    localStorage.setItem('token', token);
+    setPendingToken(null);
     setAuthStep('authenticated');
   };
 
+  // To bypass OTP in testing
+  const handleOtpBypass = () => {
+    setAuthStep('authenticated');
+  }
+
   const handleOtpBack = () => {
+    setPendingToken(null);
     setAuthStep('login');
   };
 
   const handleLogout = () => {
     if (window.confirm('Are you sure you want to log out?')) {
-      setAuthStep('login')
+      localStorage.removeItem('token');
+      setAuthStep('login');
     }
   }
 
-  const ActivePage = PAGE_MAP[activePage] || Dashboard
+  const ActivePage = PAGE_MAP[activePage]
 
   if (authStep === 'login') {
     return <LoginPage onLogin={handleLogin} />
   }
 
   if (authStep === 'otp') {
-    return <OtpPage onVerify={handleOtpVerify} onBack={handleOtpBack} />
+    return <OtpPage
+      pendingToken={pendingToken}
+      onVerify={handleOtpBypass} // To bypass OTP, change to handleOtpVerify otherwise
+      onBack={handleOtpBack}
+    />
   }
 
   return (

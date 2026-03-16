@@ -2,8 +2,10 @@ import { useState, useRef } from 'react';
 
 const OTP_LENGTH = 6;
 
-export default function OtpPage({ onVerify, onBack }) {
+export default function OtpPage({ pendingToken, onVerify, onBack }) {
     const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(''));
+    const [error, setError] = useState(null);
+    const [loading, setLoading] = useState(false);
     const inputs = useRef([]);
 
     const handleChange = (text, index) => {
@@ -23,14 +25,65 @@ export default function OtpPage({ onVerify, onBack }) {
         }
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        onVerify();
+        setError(null);
+        setLoading(true);
+
+        try {
+            /* Ignore normal OTP for now
+            const res = await fetch("http://localhost:3000/auth/verify-otp", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${pendingToken}`,
+                },
+                body: JSON.stringify({ code: otp.join('') }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                setError(data.message || 'Verification failed.');
+                setOtp(Array(OTP_LENGTH).fill(''));
+                inputs.current[0]?.focus();
+                return;
+            }
+            */
+
+            // Pass the real token up to App
+            onVerify(); // normally data.token inside
+
+        } catch (err) {
+            setError('Something went wrong. Please try again.');
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleResend = () => {
+    const handleResend = async () => {
         setOtp(Array(OTP_LENGTH).fill(''));
+        setError(null);
         inputs.current[0]?.focus();
+
+        try {
+            const res = await fetch("http://localhost:3000/auth/resend-otp", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${pendingToken}`,
+                },
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                setError(data.message || 'Failed to resend OTP.');
+            }
+        } catch (err) {
+            setError('Failed to resend OTP.');
+            console.error(err);
+        }
     };
 
     const isFilled = otp.every(d => d !== '');
@@ -54,7 +107,7 @@ export default function OtpPage({ onVerify, onBack }) {
                 <div className="otp-content">
                     <h2 className="otp-title">OTP Verification</h2>
                     <p className="otp-subtitle">Please enter the code</p>
-                    <p className="otp-hint">We sent a code to your registered email</p>
+                    <p className="otp-hint">We sent a code to your registered mobile number</p>
 
                     <form onSubmit={handleSubmit} style={{ width: '100%' }}>
                         <div className="otp-row">
@@ -69,21 +122,26 @@ export default function OtpPage({ onVerify, onBack }) {
                                     maxLength={1}
                                     type="text"
                                     inputMode="numeric"
+                                    disabled={loading}
                                 />
                             ))}
                         </div>
 
+                        {error && (
+                            <p className="otp-error">{error}</p>
+                        )}
+
                         <button
                             type="submit"
                             className="otp-submit-btn"
-                            disabled={!isFilled}
+                            disabled={!isFilled || loading}
                         >
-                            SUBMIT
+                            {loading ? 'VERIFYING...' : 'SUBMIT'}
                         </button>
 
                         <div className="otp-resend-row">
                             <span>Didn't get OTP?</span>
-                            <button type="button" onClick={handleResend} className="otp-resend-link">
+                            <button type="button" onClick={handleResend} className="otp-resend-link" disabled={loading}>
                                 Resend OTP
                             </button>
                         </div>
