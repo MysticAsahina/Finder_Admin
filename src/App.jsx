@@ -28,7 +28,30 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [activePage, setActivePage] = useState('dashboard')
 
-  const handleLogin = () => setIsLoggedIn(true)
+  const handleLogin = async (email, password, role) => {
+    try {
+      const res = await fetch("http://localhost:3000/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, role }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.log(data)
+        // Uncomment the code below to ignore login for now, comment to NOT ignore
+        setIsLoggedIn(true);
+        return;
+      }
+
+      setIsLoggedIn(true);
+
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   const handleLogout = () => {
     if (window.confirm('Are you sure you want to log out?')) {
       setIsLoggedIn(false)

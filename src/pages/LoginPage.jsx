@@ -2,11 +2,17 @@ import { useState } from 'react'
 import ResetModal from '../components/ResetModal'
 
 export default function LoginPage({ onLogin }) {
+  const defaultEmail = "admin@finder-toda.ph";
+  const defaultPassword = "chromakey";
+
   const [resetOpen, setResetOpen] = useState(false)
+  const [email, setEmail] = useState(defaultEmail);
+  const [password, setPassword] = useState(defaultPassword);
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    onLogin()
+    const role = "admin";
+    onLogin(email, password, role)
   }
 
   return (
@@ -36,7 +42,7 @@ export default function LoginPage({ onLogin }) {
                   <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                   <polyline points="22,6 12,13 2,6"/>
                 </svg>
-                <input type="email" className="login-input" placeholder="you@example.com" defaultValue="admin@finder-toda.ph" required/>
+                <input type="email" className="login-input" onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" defaultValue={defaultEmail} required/>
               </div>
             </div>
 
@@ -47,7 +53,7 @@ export default function LoginPage({ onLogin }) {
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
                   <path d="M7 11V7a5 5 0 0110 0v4"/>
                 </svg>
-                <input type="password" className="login-input" placeholder="Enter your password" defaultValue="••••••••" required/>
+                <input type="password" className="login-input" onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" defaultValue={defaultPassword} required/>
               </div>
             </div>
 
