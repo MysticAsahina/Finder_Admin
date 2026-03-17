@@ -31,7 +31,6 @@ export default function OtpPage({ pendingToken, onVerify, onBack }) {
         setLoading(true);
 
         try {
-            /* Ignore normal OTP for now
             const res = await fetch("http://localhost:3000/auth/verify-otp", {
                 method: "POST",
                 headers: {
@@ -49,10 +48,9 @@ export default function OtpPage({ pendingToken, onVerify, onBack }) {
                 inputs.current[0]?.focus();
                 return;
             }
-            */
 
             // Pass the real token up to App
-            onVerify(); // normally data.token inside
+            onVerify(data.token); // normally data.token inside
 
         } catch (err) {
             setError('Something went wrong. Please try again.');

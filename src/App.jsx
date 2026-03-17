@@ -46,11 +46,12 @@ export default function App() {
       }
 
       // For OTP bypass, remove/comment out otherwise
-      const token = data.token;
+      // const token = data.token;
 
       // Store the pending token so OtpPage can use it
-      // setPendingToken(data.pendingToken);
-      localStorage.setItem('token', token);
+      setPendingToken(data.pendingToken);
+      // Below is for bypass
+      // localStorage.setItem('token', token);
       setAuthStep('otp');
 
     } catch (err) {
@@ -91,7 +92,7 @@ export default function App() {
   if (authStep === 'otp') {
     return <OtpPage
       pendingToken={pendingToken}
-      onVerify={handleOtpBypass} // To bypass OTP, change to handleOtpVerify otherwise
+      onVerify={handleOtpVerify} // To bypass OTP, change to handleOtpVerify otherwise
       onBack={handleOtpBack}
     />
   }
