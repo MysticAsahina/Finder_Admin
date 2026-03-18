@@ -30,6 +30,7 @@ export default function App() {
   const [activePage, setActivePage] = useState('dashboard')
   const [pendingToken, setPendingToken] = useState(null)
 
+  // Returns an error message string on failure, null on success
   const handleLogin = async (email, password, role) => {
     try {
       const res = await fetch("http://localhost:3000/auth/login", {
@@ -41,32 +42,26 @@ export default function App() {
       const data = await res.json();
 
       if (!res.ok) {
-        console.log(data.message)
-        return;
+        return data.message || "Something went wrong. Please try again.";
       }
 
-      // For OTP bypass, remove/comment out otherwise
-      // const token = data.token;
-
-      // Store the pending token so OtpPage can use it
       setPendingToken(data.pendingToken);
-      // Below is for bypass
-      // localStorage.setItem('token', token);
       setAuthStep('otp');
+      return null;
 
     } catch (err) {
       console.error(err);
+      return "Unable to reach the server. Please check your connection.";
     }
   }
 
   const handleOtpVerify = (token) => {
-    // Swap the pending token for the real access token
     localStorage.setItem('token', token);
     setPendingToken(null);
     setAuthStep('authenticated');
   };
 
-  // To bypass OTP in testing
+  // To bypass OTP in testing — swap onVerify={handleOtpVerify} to this
   const handleOtpBypass = () => {
     setAuthStep('authenticated');
   }
@@ -83,8 +78,6 @@ export default function App() {
     }
   }
 
-  const ActivePage = PAGE_MAP[activePage]
-
   if (authStep === 'login') {
     return <LoginPage onLogin={handleLogin} />
   }
@@ -92,7 +85,7 @@ export default function App() {
   if (authStep === 'otp') {
     return <OtpPage
       pendingToken={pendingToken}
-      onVerify={handleOtpVerify} // To bypass OTP, change to handleOtpVerify otherwise
+      onVerify={handleOtpVerify}
       onBack={handleOtpBack}
     />
   }
