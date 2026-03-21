@@ -244,6 +244,14 @@ tbody tr:hover{background:var(--brand-ll);}
 .btn-ghost:hover{background:var(--brand-l);color:var(--brand);}
 .btn-sm{padding:5px 12px;font-size:0.76rem;border-radius:7px;}
 
+/* -- DRIVER APPLICATIONS -- */
+.doc-grid {display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px;}
+.doc-img-wrap {display: flex; flex-direction: column; gap: 4px; text-decoration: none; color: var(--muted);}
+.doc-img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 8px; border: 1px solid var(--border);}
+.doc-img-placeholder {display: flex; flex-direction: column; align-items: center; justify-content: center; aspect-ratio: 4/3; background: var(--bg2); border-radius: 8px; gap: 4px;}
+.doc-img-label { font-size: .72rem; color: var(--muted); text-align: center;}
+.doc-preview-row {display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; min-width: 0;}
+
 /* ── MESSAGES ── */
 .msg-layout{display:grid;grid-template-columns:280px 1fr;gap:0;background:var(--white);border-radius:var(--radius);border:1.5px solid var(--border-l);height:520px;overflow:hidden;}
 .msg-list{border-right:1.5px solid var(--border-l);overflow-y:auto;}
