@@ -21,13 +21,14 @@ function validatePassword(password) {
 
 export default function LoginPage({ onLogin }) {
   const defaultEmail    = "admin@finder-toda.ph";
-  const defaultPassword = "chromakey";
+  const defaultPassword = "adminTest";
 
   const [resetOpen, setResetOpen]   = useState(false)
   const [email, setEmail]           = useState(defaultEmail);
   const [password, setPassword]     = useState(defaultPassword);
   const [error, setError]           = useState(null);
   const [loading, setLoading]       = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,7 +43,7 @@ export default function LoginPage({ onLogin }) {
 
     setLoading(true);
 
-    const serverError = await onLogin(email.trim(), password.trim(), "admin");
+    const serverError = await onLogin(email.trim(), password.trim(), "admin", rememberMe);
 
     if (serverError) {
       setError(serverError);
@@ -117,7 +118,7 @@ export default function LoginPage({ onLogin }) {
 
             <div className="login-options">
               <label className="remember-me">
-                <input type="checkbox" defaultChecked />
+                <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
                 Remember Me
               </label>
               <button type="button" className="forgot-pass" onClick={() => setResetOpen(true)}>
