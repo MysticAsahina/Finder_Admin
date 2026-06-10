@@ -544,3 +544,6 @@ tbody tr:hover{background:var(--brand-ll);}
   padding: 0;
   margin-left: 6px;
 }
+
+/* ── SWAL OVERRIDES ── */
+.swal-actions-gap { gap: 14px; }

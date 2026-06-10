@@ -1,3 +1,6 @@
+import { useContext, useState } from 'react';
+import { AuthContext } from '../context/AuthContext';
+
 const PAGE_TITLES = {
   dashboard: ['Dashboard', 'Overview'],
   analytics: ['Analytics', 'Real-time Insights'],
@@ -11,6 +14,10 @@ const PAGE_TITLES = {
 }
 
 export default function Sidebar({ activePage, setActivePage, onLogout }) {
+  const { user } = useContext(AuthContext);
+  const [firstName, setFirstName] = useState(user?.firstName || 'N/A');
+  const [lastName, setLastName] = useState(user?.lastName || 'N/A');
+
   const navItems = [
     {
       section: 'Main',
@@ -116,7 +123,7 @@ export default function Sidebar({ activePage, setActivePage, onLogout }) {
         <div className="admin-pill">
           <div className="admin-avatar">JD</div>
           <div className="admin-info">
-            <div className="admin-name">Juan Dela Cruz</div>
+            <div className="admin-name">{firstName} {lastName}</div>
             <div className="admin-role">System Administrator</div>
           </div>
         </div>
