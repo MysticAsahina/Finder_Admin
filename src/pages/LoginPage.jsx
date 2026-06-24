@@ -2,7 +2,7 @@ import { useState } from 'react'
 import ResetModal from '../components/ResetModal'
 
 // Must match backend validation rules in auth.js
-const MAX_EMAIL_LENGTH    = 254;
+const MAX_EMAIL_LENGTH = 254;
 const MAX_PASSWORD_LENGTH = 128;
 
 function validateEmail(email) {
@@ -20,24 +20,21 @@ function validatePassword(password) {
 }
 
 export default function LoginPage({ onLogin }) {
-  const defaultEmail    = "admin@finder-toda.ph";
-  const defaultPassword = "chromakey";
-
-  const [resetOpen, setResetOpen]   = useState(false)
-  const [email, setEmail]           = useState(defaultEmail);
-  const [password, setPassword]     = useState(defaultPassword);
-  const [error, setError]           = useState(null);
-  const [loading, setLoading]       = useState(false);
+  const [resetOpen, setResetOpen] = useState(false)
+  const [email, setEmail] = useState();
+  const [password, setPassword] = useState();
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
 
     // Client-side validation first — avoids a round trip for obvious errors
-    const emailError    = validateEmail(email.trim());
+    const emailError = validateEmail(email.trim());
     const passwordError = validatePassword(password.trim());
 
-    if (emailError)    return setError(emailError);
+    if (emailError) return setError(emailError);
     if (passwordError) return setError(passwordError);
 
     setLoading(true);
