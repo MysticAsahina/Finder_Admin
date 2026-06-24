@@ -37,6 +37,7 @@ export default function OtpPage({ pendingToken, onVerify, onBack }) {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${pendingToken}`,
                 },
+                credentials: "include",
                 body: JSON.stringify({ code: otp.join('') }),
             });
 
@@ -50,7 +51,7 @@ export default function OtpPage({ pendingToken, onVerify, onBack }) {
             }
 
             // Pass the real token up to App
-            onVerify(data.token); // normally data.token inside
+            onVerify(data.accessToken, data.refreshToken, data.user);
 
         } catch (err) {
             setError('Something went wrong. Please try again.');

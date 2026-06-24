@@ -1,17 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useContext } from 'react'
+import { AuthContext } from '../context/AuthContext'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
-function getToken() {
-  return localStorage.getItem('token')
-}
 
-function authHeaders() {
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${getToken()}`,
-  }
-}
 
 function formatDate(iso) {
   if (!iso) return '—'
@@ -172,6 +164,14 @@ function AppCard({ app, onApprove, onReject }) {
 }
 
 export default function Applications() {
+  const { accessToken } = useContext(AuthContext)
+
+  function authHeaders() {
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
+    }
+  }
   const [apps,    setApps]    = useState([])
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState(null)

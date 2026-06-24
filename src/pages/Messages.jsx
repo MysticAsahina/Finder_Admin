@@ -1,71 +1,208 @@
-import { useState } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
+import { AuthContext } from '../context/AuthContext'
+import { io } from 'socket.io-client'
 
-const MESSAGES = [
-  { id:1, sender:'Ana Lim', preview:'Complaint about driver behavior…', time:'10:32 AM', subject:'Complaint about driver', content:'Hello, I would like to report that the driver was very rude during my trip earlier today. He refused to follow my preferred route and was quite aggressive.', unread:true },
-  { id:2, sender:'Roberto Tan', preview:'Booking issue — no drivers available', time:'9:15 AM', subject:'Booking issue', content:'I tried to book a ride at around 8pm last night but the app kept showing no available drivers. Is there a problem with the system?', unread:true },
-  { id:3, sender:'Maria Garcia', preview:'Fare inquiry — discrepancy in amount', time:'Yesterday', subject:'Fare inquiry', content:'Good day! I just want to ask about the current fare rates. The app showed a different amount from what the driver charged me.' },
-  { id:4, sender:'John Bautista', preview:'Lost item — left umbrella in tricycle', time:'Yesterday', subject:'Lost item', content:'Hi! I left my umbrella in the tricycle earlier. Can you help me contact the driver?' },
-  { id:5, sender:'Lisa Santos', preview:'Great experience using the app!', time:'Mar 6', subject:'General feedback', content:'Just wanted to say that the FINDER app is really convenient! Much better than waiting at the terminal.' },
-]
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 export default function Messages() {
-  const [selected, setSelected] = useState(MESSAGES[0])
+  const { accessToken } = useContext(AuthContext)
+  const [tickets, setTickets] = useState([])
+  const [selected, setSelected] = useState(null)
+  const [messages, setMessages] = useState([])
   const [reply, setReply] = useState('')
-  const [replies, setReplies] = useState([])
+  const socketRef = useRef(null)
+  const bodyRef = useRef(null)
 
-  const sendReply = () => {
-    if (!reply.trim()) return
-    setReplies(prev => [...prev, reply])
+  useEffect(() => {
+    if (!accessToken) return
+
+    // 1. Fetch all support tickets
+    async function loadTickets() {
+      const res = await fetch(`${API_URL}/support/tickets`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` },
+      })
+      const data = await res.json()
+      setTickets(data.tickets || [])
+    }
+    loadTickets()
+
+    // 2. Connect to Socket.IO (stays open while admin is on this page)
+    const socket = io(API_URL, {
+      auth: { token: accessToken },
+    })
+
+    socket.on('receive_message', (newMsg) => {
+      // Update the active chat if the message belongs to the selected ticket
+      setMessages(prev => {
+        if (prev.some(m => m._id === newMsg._id)) return prev
+        return [...prev, newMsg]
+      })
+
+      // Update the ticket list preview (move the ticket to the top)
+      setTickets(prev => {
+        const updated = prev.map(t =>
+          t._id === newMsg.ticketId
+            ? { ...t, updatedAt: newMsg.createdAt }
+            : t
+        )
+        return updated.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+      })
+    })
+
+    socketRef.current = socket
+    return () => socket.disconnect()
+  }, [accessToken])
+
+  useEffect(() => {
+    if (!selected || !accessToken) return
+
+    async function loadMessages() {
+      const res = await fetch(
+        `${API_URL}/support/tickets/${selected._id}/messages`,
+        { headers: { 'Authorization': `Bearer ${accessToken}` } }
+      )
+      const data = await res.json()
+      setMessages(data.messages || [])
+    }
+    loadMessages()
+
+    // Join the ticket's socket room so we receive real-time messages for it
+    if (socketRef.current) {
+      socketRef.current.emit('join_ticket', { ticketId: selected._id })
+    }
+
+    // Leave the room when switching to a different ticket
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.emit('leave_ticket', { ticketId: selected._id })
+      }
+    }
+  }, [selected])
+
+  useEffect(() => {
+    if (bodyRef.current) {
+      bodyRef.current.scrollTop = bodyRef.current.scrollHeight
+    }
+  }, [messages])
+
+  const sendReply = async () => {
+    if (!reply.trim() || !selected) return
+
+    const text = reply.trim()
     setReply('')
+
+    // Optimistically add the message to the UI
+    const optimisticMsg = {
+      _id: Date.now().toString(),
+      ticketId: selected._id,
+      senderId: '',
+      senderRole: 'admin',
+      body: text,
+      createdAt: new Date().toISOString(),
+    }
+    setMessages(prev => [...prev, optimisticMsg])
+
+    try {
+      const res = await fetch(
+        `${API_URL}/support/tickets/${selected._id}/messages`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ body: text }),
+        }
+      )
+      const data = await res.json()
+      setMessages(prev =>
+        prev.map(m => m._id === optimisticMsg._id ? data.message : m)
+      )
+    } catch (err) {
+      console.error('Failed to send reply:', err)
+    }
+  }
+
+  // Helper to get display name from a ticket
+  const getTicketName = (ticket) => {
+    if (ticket.userId?.firstName) {
+      return `${ticket.userId.firstName} ${ticket.userId.lastName}`
+    }
+    return 'Unknown User'
+  }
+
+  const getTicketRole = (ticket) => {
+    return ticket.userId?.role || 'user'
   }
 
   return (
     <div className="msg-layout">
+      {/* Left sidebar — ticket list */}
       <div className="msg-list">
         <div className="msg-search">
-          <input type="text" placeholder="Search messages…"/>
+          <input type="text" placeholder="Search messages…" />
         </div>
-        {MESSAGES.map(m => (
+        {tickets.map(t => (
           <div
-            key={m.id}
-            className={`msg-item${selected?.id === m.id ? ' active' : ''}`}
-            onClick={() => { setSelected(m); setReplies([]) }}
+            key={t._id}
+            className={`msg-item${selected?._id === t._id ? ' active' : ''}`}
+            onClick={() => setSelected(t)}
           >
             <div className="msg-item-head">
-              <span className="msg-sender">{m.sender}</span>
-              <span className="msg-time">{m.time}</span>
+              <span className="msg-sender">{getTicketName(t)}</span>
+              <span className="msg-time">
+                {new Date(t.updatedAt).toLocaleDateString('en-US', {
+                  month: 'short', day: 'numeric'
+                })}
+              </span>
             </div>
-            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-              <div className="msg-preview">{m.preview}</div>
-              {m.unread && <div className="msg-unread"></div>}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div className="msg-preview">{t.subject}</div>
+              {t.status === 'open' && <div className="msg-unread"></div>}
             </div>
           </div>
         ))}
       </div>
 
+      {/* Right side — chat detail */}
       <div className="msg-detail">
         <div className="msg-detail-head">
           <div>
-            <div className="msg-detail-name">{selected?.sender}</div>
-            <div className="msg-detail-sub">{selected?.subject}</div>
+            <div className="msg-detail-name">
+              {selected ? getTicketName(selected) : 'Select a conversation'}
+            </div>
+            <div className="msg-detail-sub">
+              {selected ? `${selected.subject} · ${getTicketRole(selected)}` : ''}
+            </div>
           </div>
-          <div style={{ display:'flex', gap:8 }}>
-            <button className="btn btn-ghost btn-sm">Mark Resolved</button>
-            <span className="badge red">Unresolved</span>
-          </div>
+          {selected && (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-ghost btn-sm">Mark Resolved</button>
+              <span className={`badge ${selected.status === 'open' ? 'red' : 'green'}`}>
+                {selected.status === 'open' ? 'Unresolved' : 'Resolved'}
+              </span>
+            </div>
+          )}
         </div>
-        <div className="msg-body">
-          <div className="msg-wrapper in">
-            <div className="bubble in">{selected?.content}</div>
-            <div className="bubble-time">{selected?.time}</div>
-          </div>
-          {replies.map((r, i) => (
-            <div key={i} className="msg-wrapper out">
-              <div className="bubble out">{r}</div>
-              <div className="bubble-time out-time">Just now</div>
+
+        <div className="msg-body" ref={bodyRef}>
+          {messages.map(msg => (
+            <div
+              key={msg._id}
+              className={`msg-wrapper ${msg.senderRole === 'admin' ? 'out' : 'in'}`}
+            >
+              <div className={`bubble ${msg.senderRole === 'admin' ? 'out' : 'in'}`}>
+                {msg.body}
+              </div>
+              <div className={`bubble-time ${msg.senderRole === 'admin' ? 'out-time' : ''}`}>
+                {new Date(msg.createdAt).toLocaleTimeString('en-US', {
+                  hour: '2-digit', minute: '2-digit', hour12: true
+                })}
+              </div>
             </div>
           ))}
         </div>
+
         <div className="msg-input-bar">
           <input
             className="msg-input"

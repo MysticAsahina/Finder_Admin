@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useContext } from 'react'
+import { AuthContext } from './context/AuthContext'
 import Sidebar from './components/Sidebar'
 import Topbar from './components/Topbar'
 import LoginPage from './pages/LoginPage'
@@ -26,17 +27,18 @@ const PAGE_MAP = {
 }
 
 export default function App() {
-  const [authStep, setAuthStep] = useState('login') // 'login', 'otp', 'authenticated'
+  const { loading, accessToken, setAccessToken, setUser } = useContext(AuthContext)
+  const [authStep, setAuthStep] = useState('login') // 'login', 'otp'
   const [activePage, setActivePage] = useState('dashboard')
   const [pendingToken, setPendingToken] = useState(null)
 
   // Returns an error message string on failure, null on success
-  const handleLogin = async (email, password, role) => {
+  const handleLogin = async (email, password, role, rememberMe) => {
     try {
       const res = await fetch("http://localhost:3000/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, role }),
+        body: JSON.stringify({ email, password, role, rememberMe }),
       });
 
       const data = await res.json();
@@ -55,10 +57,11 @@ export default function App() {
     }
   }
 
-  const handleOtpVerify = (token) => {
-    localStorage.setItem('token', token);
+  const handleOtpVerify = (newAccessToken, refreshToken, userDetails) => {
+    setAccessToken(newAccessToken);
+    setUser(userDetails);
     setPendingToken(null);
-    setAuthStep('authenticated');
+    setAuthStep('login');
   };
 
   // To bypass OTP in testing — swap onVerify={handleOtpVerify} to this
@@ -71,11 +74,43 @@ export default function App() {
     setAuthStep('login');
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (window.confirm('Are you sure you want to log out?')) {
-      localStorage.removeItem('token');
+      try {
+        await fetch("http://localhost:3000/auth/logout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        });
+      } catch (err) {
+        console.error("Logout failed", err);
+      }
+      setAccessToken(null);
+      setUser(null);
       setAuthStep('login');
     }
+  }
+
+  if (loading) {
+    return <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>
+  }
+
+  if (accessToken) {
+    return (
+      <div className="app">
+        <Sidebar activePage={activePage} setActivePage={setActivePage} onLogout={handleLogout} />
+        <div className="main">
+          <Topbar activePage={activePage} />
+          <div className="content">
+            {Object.entries(PAGE_MAP).map(([key, PageComponent]) => (
+              <div key={key} className={`page${activePage === key ? ' active' : ''}`}>
+                <PageComponent />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (authStep === 'login') {
@@ -90,19 +125,5 @@ export default function App() {
     />
   }
 
-  return (
-    <div className="app">
-      <Sidebar activePage={activePage} setActivePage={setActivePage} onLogout={handleLogout} />
-      <div className="main">
-        <Topbar activePage={activePage} />
-        <div className="content">
-          {Object.entries(PAGE_MAP).map(([key, PageComponent]) => (
-            <div key={key} className={`page${activePage === key ? ' active' : ''}`}>
-              <PageComponent />
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
+  return null;
 }
