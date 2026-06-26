@@ -1,10 +1,22 @@
 import { useContext, useEffect, useRef, useState } from 'react'
 import { AuthContext } from '../context/AuthContext'
 import { io } from 'socket.io-client'
+import Swal from 'sweetalert2'
+
+const styledSwal = Swal.mixin({
+  customClass: {
+    confirmButton: 'btn btn-primary',
+    cancelButton: 'btn btn-outline',
+    actions: 'swal-actions-gap'
+  },
+  buttonsStyling: false,
+  background: 'var(--white)',
+  color: 'var(--text)'
+});
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
-export default function Messages() {
+export default function Messages({ role = "passenger" }) {
   const { accessToken } = useContext(AuthContext)
   const [tickets, setTickets] = useState([])
   const [selected, setSelected] = useState(null)
@@ -18,7 +30,7 @@ export default function Messages() {
 
     // 1. Fetch all support tickets
     async function loadTickets() {
-      const res = await fetch(`${API_URL}/support/tickets`, {
+      const res = await fetch(`${API_URL}/support/tickets?role=${role}`, {
         headers: { 'Authorization': `Bearer ${accessToken}` },
       })
       const data = await res.json()
@@ -35,23 +47,40 @@ export default function Messages() {
       // Update the active chat if the message belongs to the selected ticket
       setMessages(prev => {
         if (prev.some(m => m._id === newMsg._id)) return prev
+        const isOwnOptimistic = prev.some(m => 
+          m.body === newMsg.body && 
+          m.senderRole === newMsg.senderRole && 
+          m._id.length < 24
+        )
+        if (isOwnOptimistic) return prev
         return [...prev, newMsg]
       })
+    })
 
-      // Update the ticket list preview (move the ticket to the top)
+    socket.on('new_ticket', (ticket) => {
+      if (ticket.userRole === role) {
+        setTickets(prev => [ticket, ...prev])
+      }
+    })
+
+    socket.on('ticket_updated', ({ ticketId, updatedAt, status }) => {
       setTickets(prev => {
         const updated = prev.map(t =>
-          t._id === newMsg.ticketId
-            ? { ...t, updatedAt: newMsg.createdAt }
+          t._id === ticketId
+            ? { ...t, updatedAt, ...(status ? { status } : {}) }
             : t
         )
         return updated.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
       })
     })
 
-    socketRef.current = socket
-    return () => socket.disconnect()
-  }, [accessToken])
+    socket.on('ticket_resolved', () => {
+      setSelected(prev => prev ? { ...prev, status: 'resolved' } : prev)
+    })
+
+      socketRef.current = socket
+      return () => socket.disconnect()
+    }, [accessToken, role])
 
   useEffect(() => {
     if (!selected || !accessToken) return
@@ -115,12 +144,48 @@ export default function Messages() {
         }
       )
       const data = await res.json()
-      setMessages(prev =>
-        prev.map(m => m._id === optimisticMsg._id ? data.message : m)
-      )
+      setMessages(prev => {
+        if (prev.some(m => m._id === data.message._id)) {
+          return prev.filter(m => m._id !== optimisticMsg._id)
+        }
+        return prev.map(m => m._id === optimisticMsg._id ? data.message : m)
+      })
     } catch (err) {
       console.error('Failed to send reply:', err)
+      setMessages(prev => prev.filter(m => m._id !== optimisticMsg._id))
     }
+  }
+
+  const handleResolve = () => {
+    if (!selected) return;
+
+    styledSwal.fire({
+      title: 'Resolve Ticket',
+      text: 'Are you sure you want to mark this ticket as resolved? The user will no longer be able to send messages in this chat.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Resolve',
+      cancelButtonText: 'Cancel'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          const res = await fetch(`${API_URL}/support/tickets/${selected._id}/resolve`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+          });
+          if (res.ok) {
+            setSelected(prev => ({ ...prev, status: 'resolved' }));
+            setTickets(prev => prev.map(t => t._id === selected._id ? { ...t, status: 'resolved' } : t));
+            styledSwal.fire('Resolved', 'The ticket has been resolved.', 'success');
+          } else {
+            styledSwal.fire('Error', 'Could not resolve ticket.', 'error');
+          }
+        } catch (err) {
+          console.error('Failed to resolve ticket:', err);
+          styledSwal.fire('Error', 'Unable to reach the server.', 'error');
+        }
+      }
+    });
   }
 
   // Helper to get display name from a ticket
@@ -177,7 +242,9 @@ export default function Messages() {
           </div>
           {selected && (
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn btn-ghost btn-sm">Mark Resolved</button>
+              {selected.status === 'open' && (
+                <button className="btn btn-ghost btn-sm" onClick={handleResolve}>Mark Resolved</button>
+              )}
               <span className={`badge ${selected.status === 'open' ? 'red' : 'green'}`}>
                 {selected.status === 'open' ? 'Unresolved' : 'Resolved'}
               </span>
@@ -203,17 +270,28 @@ export default function Messages() {
           ))}
         </div>
 
-        <div className="msg-input-bar">
-          <input
-            className="msg-input"
-            type="text"
-            placeholder="Type a reply…"
-            value={reply}
-            onChange={e => setReply(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && sendReply()}
-          />
-          <button className="btn btn-primary btn-sm" onClick={sendReply}>Send</button>
-        </div>
+        {selected ? (
+          selected.status === 'open' ? (
+            <div className="msg-input-bar">
+              <input
+                className="msg-input"
+                type="text"
+                placeholder="Type a reply…"
+                value={reply}
+                onChange={e => setReply(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && sendReply()}
+              />
+              <button className="btn btn-primary btn-sm" onClick={sendReply}>Send</button>
+            </div>
+          ) : (
+            <div className="msg-input-bar" style={{ justifyContent: 'center' }}>
+              <span style={{ color: '#888' }}>This ticket has been resolved.</span>
+            </div>
+          )
+        ) : (
+          <div className="msg-input-bar" style={{ justifyContent: 'center', backgroundColor: 'transparent', borderTop: 'none' }}>
+          </div>
+        )}
       </div>
     </div>
   )

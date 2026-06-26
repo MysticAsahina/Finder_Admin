@@ -8,7 +8,8 @@ import Dashboard from './pages/Dashboard'
 import Analytics from './pages/Analytics'
 import Drivers from './pages/Drivers'
 import Applications from './pages/Applications'
-import Messages from './pages/Messages'
+import PassengerMessages from './pages/Messages'
+import DriverMessages from './pages/DriverMessages'
 import Reports from './pages/Reports'
 import FareManagement from './pages/FareManagement'
 import AuditLog from './pages/AuditLog'
@@ -19,7 +20,8 @@ const PAGE_MAP = {
   analytics: Analytics,
   drivers: Drivers,
   applications: Applications,
-  messages: Messages,
+  passengerMessages: PassengerMessages,
+  driverMessages: DriverMessages,
   reports: Reports,
   fare: FareManagement,
   audit: AuditLog,
