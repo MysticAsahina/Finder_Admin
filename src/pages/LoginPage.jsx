@@ -2,7 +2,7 @@ import { useState } from 'react'
 import ResetModal from '../components/ResetModal'
 
 // Must match backend validation rules in auth.js
-const MAX_EMAIL_LENGTH    = 254;
+const MAX_EMAIL_LENGTH = 254;
 const MAX_PASSWORD_LENGTH = 128;
 
 function validateEmail(email) {
@@ -35,10 +35,10 @@ export default function LoginPage({ onLogin }) {
     setError(null);
 
     // Client-side validation first — avoids a round trip for obvious errors
-    const emailError    = validateEmail(email.trim());
+    const emailError = validateEmail(email.trim());
     const passwordError = validatePassword(password.trim());
 
-    if (emailError)    return setError(emailError);
+    if (emailError) return setError(emailError);
     if (passwordError) return setError(passwordError);
 
     setLoading(true);
