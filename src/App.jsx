@@ -1,5 +1,8 @@
-import { useState, useContext } from 'react'
+import { useState, useEffect, useContext, useCallback } from 'react'
+import { io } from 'socket.io-client'
+import Swal from 'sweetalert2'
 import { AuthContext } from './context/AuthContext'
+import useIdleTimer from './hooks/useIdleTimer'
 import Sidebar from './components/Sidebar'
 import Topbar from './components/Topbar'
 import LoginPage from './pages/LoginPage'
@@ -14,6 +17,8 @@ import Reports from './pages/Reports'
 import FareManagement from './pages/FareManagement'
 import AuditLog from './pages/AuditLog'
 import Settings from './pages/Settings'
+
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 const PAGE_MAP = {
   dashboard: Dashboard,
@@ -33,6 +38,80 @@ export default function App() {
   const [authStep, setAuthStep] = useState('login') // 'login', 'otp'
   const [activePage, setActivePage] = useState('dashboard')
   const [pendingToken, setPendingToken] = useState(null)
+
+  // --- Session Timeout (idle timer) ---
+  const [sessionTimeoutEnabled, setSessionTimeoutEnabled] = useState(() => {
+    return typeof window !== 'undefined'
+      ? localStorage.getItem('setting_sessionTimeout') === 'true'
+      : false;
+  });
+
+  useEffect(() => {
+    const handleSettingsUpdate = () => {
+      setSessionTimeoutEnabled(localStorage.getItem('setting_sessionTimeout') === 'true');
+    };
+    window.addEventListener('settingsUpdated', handleSettingsUpdate);
+    return () => window.removeEventListener('settingsUpdated', handleSettingsUpdate);
+  }, []);
+
+  const silentLogout = useCallback(async () => {
+    try {
+      await fetch(`${API_URL}/auth/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+    } catch (err) {
+      console.error('Logout failed', err);
+    }
+    setAccessToken(null);
+    setUser(null);
+    setAuthStep('login');
+  }, [setAccessToken, setUser]);
+
+  // Set to 1 minute (60 * 1000) for testing as requested
+  useIdleTimer(silentLogout, 60 * 1000, sessionTimeoutEnabled && !!accessToken);
+
+  // --- Socket.io notifications ---
+  useEffect(() => {
+    if (!accessToken) return;
+
+    const socket = io(API_URL, { auth: { token: accessToken } });
+
+    socket.on('new_driver_application', (data) => {
+      const enabled = localStorage.getItem('setting_notifDriverApps') !== 'false';
+      if (!enabled) return;
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'info',
+        title: `New driver application from ${data?.name || 'a driver'}`,
+        showConfirmButton: false,
+        timer: 4000,
+        timerProgressBar: true,
+        background: 'var(--white)',
+        color: 'var(--text)',
+      });
+    });
+
+    socket.on('new_ticket', (ticket) => {
+      const enabled = localStorage.getItem('setting_notifPassengerMsgs') !== 'false';
+      if (!enabled) return;
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'info',
+        title: `New support ticket: ${ticket?.subject || 'Inquiry'}`,
+        showConfirmButton: false,
+        timer: 4000,
+        timerProgressBar: true,
+        background: 'var(--white)',
+        color: 'var(--text)',
+      });
+    });
+
+    return () => socket.disconnect();
+  }, [accessToken]);
 
   // Returns an error message string on failure, null on success
   const handleLogin = async (email, password, role, rememberMe) => {

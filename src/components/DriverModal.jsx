@@ -53,12 +53,19 @@ export default function DriverModal({ isOpen, onClose, driver }) {
 
         {/* Docs */}
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
-          {[["Driver's License", <svg key="l" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="7" y1="15" x2="12" y2="15"/></svg>],
-            ['Tricycle Photo', <svg key="p" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>]
-          ].map(([label, icon]) => (
-            <div key={label} style={{ background:'var(--bg)', padding:20, borderRadius:14, height:110, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:12, cursor:'pointer', border:'1.5px dashed var(--border-l)' }}>
-              {icon}
-              <span style={{ fontSize:'0.85rem', fontWeight:600, color:'var(--muted)' }}>{label}</span>
+          {[
+            ["Driver's License", driver.licenseImgFront],
+            ['Tricycle Photo', driver.tricycleImgFront]
+          ].map(([label, imgSrc]) => (
+            <div key={label} style={{ background:'var(--bg)', borderRadius:14, height:150, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', border:'1.5px dashed var(--border-l)', overflow:'hidden', position:'relative' }}>
+              {imgSrc ? (
+                <img src={imgSrc} alt={label} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+              ) : (
+                <span style={{ fontSize:'0.85rem', fontWeight:600, color:'var(--muted)' }}>No Image</span>
+              )}
+              <div style={{ position:'absolute', bottom:0, left:0, right:0, background:'rgba(0,0,0,0.6)', padding:'4px 0', textAlign:'center' }}>
+                <span style={{ fontSize:'0.75rem', fontWeight:600, color:'white' }}>{label}</span>
+              </div>
             </div>
           ))}
         </div>

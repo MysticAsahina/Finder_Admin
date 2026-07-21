@@ -20,11 +20,10 @@ function validatePassword(password) {
 }
 
 export default function LoginPage({ onLogin }) {
-  const defaultEmail    = "admin@finder-toda.ph";
   const defaultPassword = "adminTest";
 
   const [resetOpen, setResetOpen]   = useState(false)
-  const [email, setEmail]           = useState(defaultEmail);
+  const [email, setEmail]           = useState();
   const [password, setPassword]     = useState(defaultPassword);
   const [error, setError]           = useState(null);
   const [loading, setLoading]       = useState(false);

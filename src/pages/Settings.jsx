@@ -108,6 +108,57 @@ export default function Settings() {
                 return;
             }
 
+            if (data.pendingProfileOtp) {
+                const { value: otpCode } = await styledSwal.fire({
+                    title: 'Verification Required',
+                    text: data.message,
+                    input: 'text',
+                    inputPlaceholder: 'Enter 6-digit OTP',
+                    showCancelButton: true,
+                    confirmButtonText: 'Verify',
+                    preConfirm: (code) => {
+                        if (!code || code.length !== 6) {
+                            styledSwal.showValidationMessage('Please enter a valid 6-digit OTP.');
+                            return false;
+                        }
+                        return code;
+                    }
+                });
+
+                if (otpCode) {
+                    verifyProfileUpdate(otpCode);
+                }
+                return;
+            }
+
+            setUser(data.user);
+            styledSwal.fire('Success', 'Profile updated successfully.', 'success');
+        } catch (err) {
+            styledSwal.fire('Error', 'Unable to reach the server. Please check your connection.', 'error');
+            console.error(err);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const verifyProfileUpdate = async (code) => {
+        setSaving(true);
+        try {
+            const res = await fetch(`${API_URL}/admin/edit-profile/verify-update`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({ code }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                styledSwal.fire('Error', data.message || 'Invalid OTP.', 'error');
+                return;
+            }
+
             setUser(data.user);
             styledSwal.fire('Success', 'Profile updated successfully.', 'success');
         } catch (err) {
@@ -118,14 +169,32 @@ export default function Settings() {
         }
     };
   
-  const toggleRow = (name, desc, defaultChecked) => (
-    <div className="toggle-row" style={{ padding:'12px 0' }}>
+  // --- Settings toggles backed by localStorage ---
+  const getStoredToggle = (key, fallback) => {
+    const val = localStorage.getItem(key);
+    if (val === null) return fallback;
+    return val === 'true';
+  };
+
+  const [sessionTimeout, setSessionTimeout] = useState(() => getStoredToggle('setting_sessionTimeout', false));
+  const [notifDriverApps, setNotifDriverApps] = useState(() => getStoredToggle('setting_notifDriverApps', true));
+  const [notifPassengerMsgs, setNotifPassengerMsgs] = useState(() => getStoredToggle('setting_notifPassengerMsgs', true));
+
+  const handleToggle = (key, setter) => (e) => {
+    const val = e.target.checked;
+    setter(val);
+    localStorage.setItem(key, String(val));
+    window.dispatchEvent(new Event('settingsUpdated'));
+  };
+
+  const settingsToggleRow = (name, desc, checked, onChange, disabled = false) => (
+    <div className="toggle-row" style={{ padding:'12px 0', opacity: disabled ? 0.5 : 1 }}>
       <div>
         <div className="toggle-name">{name}</div>
         <div className="toggle-desc">{desc}</div>
       </div>
       <label className="toggle">
-        <input type="checkbox" defaultChecked={defaultChecked}/>
+        <input type="checkbox" checked={checked} onChange={onChange} disabled={disabled}/>
         <span className="toggle-slider"></span>
       </label>
     </div>
@@ -175,9 +244,9 @@ export default function Settings() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           Security Configuration
         </div>
-        {toggleRow('Two-Factor Authentication', 'Require MPIN on every admin login', true)}
+        {settingsToggleRow('Two-Factor Authentication', 'Require MPIN on every admin login', true, () => {}, true)}
         <div style={{ borderTop:'1px solid var(--border-l)' }}>
-          {toggleRow('Session Timeout', 'Auto-logout after 30 minutes of inactivity', false)}
+          {settingsToggleRow('Session Timeout', 'Auto-logout after 30 minutes of inactivity', sessionTimeout, handleToggle('setting_sessionTimeout', setSessionTimeout))}
         </div>
       </div>
 
@@ -187,12 +256,12 @@ export default function Settings() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="2.5"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
           Notification Settings
         </div>
-        {toggleRow('New Driver Applications', 'Alert when a new driver submits an application', true)}
+        {settingsToggleRow('New Driver Applications', 'Alert when a new driver submits an application', notifDriverApps, handleToggle('setting_notifDriverApps', setNotifDriverApps))}
         <div style={{ borderTop:'1px solid var(--border-l)' }}>
-          {toggleRow('Passenger Messages', 'Notify on new passenger inquiries or complaints', true)}
+          {settingsToggleRow('Passenger Messages', 'Notify on new passenger inquiries or complaints', notifPassengerMsgs, handleToggle('setting_notifPassengerMsgs', setNotifPassengerMsgs))}
         </div>
         <div style={{ borderTop:'1px solid var(--border-l)' }}>
-          {toggleRow('System Reports', 'Weekly summary reports via email', true)}
+          {settingsToggleRow('System Reports', 'Weekly summary reports via email', true, () => {}, true)}
         </div>
       </div>
     </div>
