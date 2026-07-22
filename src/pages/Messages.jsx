@@ -22,8 +22,12 @@ export default function Messages({ role = "passenger" }) {
   const [selected, setSelected] = useState(null)
   const [messages, setMessages] = useState([])
   const [reply, setReply] = useState('')
+  const [pendingMedia, setPendingMedia] = useState(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [previewImage, setPreviewImage] = useState(null)
   const socketRef = useRef(null)
   const bodyRef = useRef(null)
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
     if (!accessToken) return
@@ -114,11 +118,52 @@ export default function Messages({ role = "passenger" }) {
     }
   }, [messages])
 
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    const isImage = file.type.startsWith('image/')
+    const isVideo = file.type.startsWith('video/')
+
+    if (!isImage && !isVideo) {
+      styledSwal.fire('Invalid File', 'Only images and videos are allowed.', 'error')
+      e.target.value = ''
+      return
+    }
+
+    if (isImage && file.size > 5 * 1024 * 1024) {
+      styledSwal.fire('File Too Large', 'Images must be less than 5MB.', 'error')
+      e.target.value = ''
+      return
+    }
+
+    if (isVideo && file.size > 20 * 1024 * 1024) {
+      styledSwal.fire('File Too Large', 'Videos must be less than 20MB.', 'error')
+      e.target.value = ''
+      return
+    }
+
+    const previewUrl = URL.createObjectURL(file)
+    setPendingMedia({ file, previewUrl, mediaType: isImage ? 'image' : 'video' })
+    e.target.value = ''
+  }
+
+  const cancelPendingMedia = () => {
+    if (pendingMedia?.previewUrl) {
+      URL.revokeObjectURL(pendingMedia.previewUrl)
+    }
+    setPendingMedia(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
   const sendReply = async () => {
-    if (!reply.trim() || !selected) return
+    if ((!reply.trim() && !pendingMedia) || !selected || isUploading) return
 
     const text = reply.trim()
+    const media = pendingMedia
     setReply('')
+    setPendingMedia(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
 
     // Optimistically add the message to the UI
     const optimisticMsg = {
@@ -127,11 +172,53 @@ export default function Messages({ role = "passenger" }) {
       senderId: '',
       senderRole: 'admin',
       body: text,
+      mediaUrl: media ? media.previewUrl : undefined,
+      mediaType: media ? media.mediaType : undefined,
       createdAt: new Date().toISOString(),
     }
     setMessages(prev => [...prev, optimisticMsg])
 
     try {
+      let finalMediaUrl = undefined
+      let finalMediaType = undefined
+
+      if (media) {
+        setIsUploading(true)
+        const sigRes = await fetch(`${API_URL}/chat/cloudinary-signature`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ mediaType: media.mediaType })
+        })
+        const sigData = await sigRes.json()
+
+        const formData = new FormData()
+        formData.append('file', media.file)
+        formData.append('api_key', sigData.apiKey)
+        formData.append('timestamp', sigData.timestamp)
+        formData.append('signature', sigData.signature)
+        if (sigData.folder) formData.append('folder', sigData.folder)
+        if (sigData.tags) formData.append('tags', sigData.tags)
+
+        const uploadRes = await fetch(
+          `https://api.cloudinary.com/v1_1/${sigData.cloudName}/${media.mediaType === 'video' ? 'video' : 'image'}/upload`,
+          { method: 'POST', body: formData }
+        )
+        const uploadData = await uploadRes.json()
+        finalMediaUrl = uploadData.secure_url
+        finalMediaType = media.mediaType
+        setIsUploading(false)
+      }
+
+      const payload = {}
+      if (text) payload.body = text
+      if (finalMediaUrl) {
+        payload.mediaUrl = finalMediaUrl
+        payload.mediaType = finalMediaType
+      }
+
       const res = await fetch(
         `${API_URL}/support/tickets/${selected._id}/messages`,
         {
@@ -140,7 +227,7 @@ export default function Messages({ role = "passenger" }) {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${accessToken}`,
           },
-          body: JSON.stringify({ body: text }),
+          body: JSON.stringify(payload),
         }
       )
       const data = await res.json()
@@ -153,6 +240,7 @@ export default function Messages({ role = "passenger" }) {
     } catch (err) {
       console.error('Failed to send reply:', err)
       setMessages(prev => prev.filter(m => m._id !== optimisticMsg._id))
+      setIsUploading(false)
     }
   }
 
@@ -259,7 +347,13 @@ export default function Messages({ role = "passenger" }) {
               className={`msg-wrapper ${msg.senderRole === 'admin' ? 'out' : 'in'}`}
             >
               <div className={`bubble ${msg.senderRole === 'admin' ? 'out' : 'in'}`}>
-                {msg.body}
+                {msg.body && <div style={{ marginBottom: msg.mediaUrl ? 6 : 0 }}>{msg.body}</div>}
+                {msg.mediaUrl && msg.mediaType === 'image' && (
+                  <img src={msg.mediaUrl} onClick={() => setPreviewImage(msg.mediaUrl)} alt="attachment" />
+                )}
+                {msg.mediaUrl && msg.mediaType === 'video' && (
+                  <video src={msg.mediaUrl} controls />
+                )}
               </div>
               <div className={`bubble-time ${msg.senderRole === 'admin' ? 'out-time' : ''}`}>
                 {new Date(msg.createdAt).toLocaleTimeString('en-US', {
@@ -272,16 +366,44 @@ export default function Messages({ role = "passenger" }) {
 
         {selected ? (
           selected.status === 'open' ? (
-            <div className="msg-input-bar">
-              <input
-                className="msg-input"
-                type="text"
-                placeholder="Type a reply…"
-                value={reply}
-                onChange={e => setReply(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && sendReply()}
-              />
-              <button className="btn btn-primary btn-sm" onClick={sendReply}>Send</button>
+            <div style={{ display: 'flex', flexDirection: 'column', borderTop: '1.5px solid var(--border-l)' }}>
+              {pendingMedia && (
+                <div className="msg-pending-media">
+                  <button className="msg-pending-close" onClick={cancelPendingMedia}>✕</button>
+                  {pendingMedia.mediaType === 'image' ? (
+                    <img src={pendingMedia.previewUrl} alt="preview" />
+                  ) : (
+                    <video src={pendingMedia.previewUrl} />
+                  )}
+                </div>
+              )}
+              <div className="msg-input-bar" style={{ borderTop: 'none' }}>
+                <input
+                  type="file"
+                  accept="image/*,video/*"
+                  ref={fileInputRef}
+                  style={{ display: 'none' }}
+                  onChange={handleFileSelect}
+                />
+                <button 
+                  className="msg-attachment-btn" 
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Attach file"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+                </button>
+                <input
+                  className="msg-input"
+                  type="text"
+                  placeholder="Type a reply…"
+                  value={reply}
+                  onChange={e => setReply(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && sendReply()}
+                />
+                <button className="btn btn-primary btn-sm" onClick={sendReply} disabled={isUploading}>
+                  {isUploading ? 'Uploading...' : 'Send'}
+                </button>
+              </div>
             </div>
           ) : (
             <div className="msg-input-bar" style={{ justifyContent: 'center' }}>
@@ -293,6 +415,13 @@ export default function Messages({ role = "passenger" }) {
           </div>
         )}
       </div>
+
+      {previewImage && (
+        <div className="media-preview-overlay" onClick={() => setPreviewImage(null)}>
+          <button className="media-preview-close" onClick={() => setPreviewImage(null)}>✕</button>
+          <img src={previewImage} alt="Fullscreen preview" onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
     </div>
   )
 }

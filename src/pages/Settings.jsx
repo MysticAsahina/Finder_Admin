@@ -114,6 +114,11 @@ export default function Settings() {
                     text: data.message,
                     input: 'text',
                     inputPlaceholder: 'Enter 6-digit OTP',
+                    inputAttributes: {
+                        maxlength: 6,
+                        inputmode: 'numeric',
+                        pattern: '[0-9]*'
+                    },
                     showCancelButton: true,
                     confirmButtonText: 'Verify',
                     preConfirm: (code) => {
