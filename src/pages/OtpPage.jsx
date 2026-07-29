@@ -1,5 +1,7 @@
 import { useState, useRef } from 'react';
 
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+
 const OTP_LENGTH = 6;
 
 export default function OtpPage({ pendingToken, onVerify, onBack }) {
@@ -31,7 +33,7 @@ export default function OtpPage({ pendingToken, onVerify, onBack }) {
         setLoading(true);
 
         try {
-            const res = await fetch("http://localhost:3000/auth/verify-otp", {
+            const res = await fetch(`${API_URL}/auth/verify-otp`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -67,7 +69,7 @@ export default function OtpPage({ pendingToken, onVerify, onBack }) {
         inputs.current[0]?.focus();
 
         try {
-            const res = await fetch("http://localhost:3000/auth/resend-otp", {
+            const res = await fetch(`${API_URL}/auth/resend-otp`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
