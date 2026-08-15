@@ -4,8 +4,14 @@ import { AuthContext } from '../context/AuthContext';
 export default function Sidebar({ activePage, setActivePage, onLogout }) {
   const { user } = useContext(AuthContext);
 
-  // Track which nav item badges have been dismissed by clicking
-  const [dismissedBadges, setDismissedBadges] = useState({});
+  // Track which nav item badges have been dismissed — persisted in localStorage
+  const [dismissedBadges, setDismissedBadges] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('dismissedBadges') || '{}')
+    } catch {
+      return {}
+    }
+  });
 
   const navItems = [
     {
@@ -100,7 +106,13 @@ export default function Sidebar({ activePage, setActivePage, onLogout }) {
               className={`nav-item${activePage === id ? ' active' : ''}`}
               onClick={() => {
                 setActivePage(id);
-                if (badge) setDismissedBadges(prev => ({ ...prev, [id]: true }));
+                if (badge) {
+                  setDismissedBadges(prev => {
+                    const updated = { ...prev, [id]: true };
+                    localStorage.setItem('dismissedBadges', JSON.stringify(updated));
+                    return updated;
+                  });
+                }
               }}
             >
               {icon}
