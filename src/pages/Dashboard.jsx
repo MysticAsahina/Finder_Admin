@@ -90,14 +90,14 @@ const barOptions = {
   },
 }
 
-export default function Dashboard() {
+export default function Dashboard({ isActive }) {
   const { accessToken } = useContext(AuthContext)
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (!accessToken) return
+    if (!accessToken || !isActive) return
     setLoading(true)
     setError(null)
 
@@ -111,7 +111,7 @@ export default function Dashboard() {
       })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))
-  }, [accessToken])
+  }, [accessToken, isActive])
 
   // ── derived bar chart data ─────────────────────────────────────────────────
   const barData = data

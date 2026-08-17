@@ -57,6 +57,15 @@ export default function Messages({ role = "passenger" }) {
           m._id.length < 24
         )
         if (isOwnOptimistic) return prev
+        
+        // If they are currently viewing this ticket, mark it as read immediately
+        if (selected && selected._id === newMsg.ticketId) {
+          window.dispatchEvent(new CustomEvent('ticket_read', { detail: selected._id }))
+          setTickets(currentTickets => currentTickets.map(t => 
+            t._id === selected._id ? { ...t, hasUnreadAdmin: false } : t
+          ))
+        }
+        
         return [...prev, newMsg]
       })
     })
@@ -67,11 +76,16 @@ export default function Messages({ role = "passenger" }) {
       }
     })
 
-    socket.on('ticket_updated', ({ ticketId, updatedAt, status }) => {
+    socket.on('ticket_updated', ({ ticketId, updatedAt, status, senderRole }) => {
       setTickets(prev => {
         const updated = prev.map(t =>
           t._id === ticketId
-            ? { ...t, updatedAt, ...(status ? { status } : {}) }
+            ? { 
+                ...t, 
+                updatedAt, 
+                ...(status ? { status } : {}),
+                ...(senderRole ? { hasUnreadAdmin: senderRole !== 'admin' } : {}) 
+              }
             : t
         )
         return updated.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
@@ -89,6 +103,9 @@ export default function Messages({ role = "passenger" }) {
   useEffect(() => {
     if (!selected || !accessToken) return
 
+    // Notify App.jsx to clear the unread badge for this ticket
+    window.dispatchEvent(new CustomEvent('ticket_read', { detail: selected._id }))
+
     async function loadMessages() {
       const res = await fetch(
         `${API_URL}/support/tickets/${selected._id}/messages`,
@@ -96,6 +113,11 @@ export default function Messages({ role = "passenger" }) {
       )
       const data = await res.json()
       setMessages(data.messages || [])
+      
+      // Update local ticket list to remove unread badge since we just fetched it
+      setTickets(prev => prev.map(t => 
+        t._id === selected._id ? { ...t, hasUnreadAdmin: false } : t
+      ))
     }
     loadMessages()
 
@@ -311,7 +333,10 @@ export default function Messages({ role = "passenger" }) {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <div className="msg-preview">{t.subject}</div>
-              {t.status === 'open' && <div className="msg-unread"></div>}
+              {t.status === 'resolved' && (
+                <span style={{ fontSize: '10px', backgroundColor: 'var(--border-l)', color: 'var(--text-light)', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', textTransform: 'uppercase' }}>Resolved</span>
+              )}
+              {t.hasUnreadAdmin && <div className="msg-unread"></div>}
             </div>
           </div>
         ))}

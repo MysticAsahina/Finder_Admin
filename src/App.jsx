@@ -38,6 +38,36 @@ export default function App() {
   const [authStep, setAuthStep] = useState('login') // 'login', 'otp'
   const [activePage, setActivePage] = useState('dashboard')
   const [pendingToken, setPendingToken] = useState(null)
+  
+  // --- Badge State ---
+  const [badges, setBadges] = useState({
+    pendingApplications: 0,
+    unreadPassengerTickets: 0,
+    unreadDriverTickets: 0
+  });
+
+  const fetchBadges = useCallback(async () => {
+    if (!accessToken) return;
+    try {
+      const res = await fetch(`${API_URL}/admin/badges`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBadges({
+          pendingApplications: data.pendingApplications,
+          unreadPassengerTickets: data.unreadPassengerTickets,
+          unreadDriverTickets: data.unreadDriverTickets
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch badges', err);
+    }
+  }, [accessToken]);
+
+  useEffect(() => {
+    fetchBadges();
+  }, [fetchBadges]);
 
   // --- Session Timeout (idle timer) ---
   const [sessionTimeoutEnabled, setSessionTimeoutEnabled] = useState(() => {
@@ -79,6 +109,7 @@ export default function App() {
     const socket = io(API_URL, { auth: { token: accessToken } });
 
     socket.on('new_driver_application', (data) => {
+      fetchBadges();
       const enabled = localStorage.getItem('setting_notifDriverApps') !== 'false';
       if (!enabled) return;
       Swal.fire({
@@ -95,6 +126,7 @@ export default function App() {
     });
 
     socket.on('new_ticket', (ticket) => {
+      fetchBadges();
       const enabled = localStorage.getItem('setting_notifPassengerMsgs') !== 'false';
       if (!enabled) return;
       Swal.fire({
@@ -110,8 +142,25 @@ export default function App() {
       });
     });
 
+    socket.on('ticket_updated', (data) => {
+      fetchBadges();
+    });
+
+    socket.on('application_resolved', () => {
+      fetchBadges();
+    });
+
     return () => socket.disconnect();
-  }, [accessToken]);
+  }, [accessToken, fetchBadges]);
+
+  // --- Badge Navigation Listeners ---
+  useEffect(() => {
+    const handleTicketRead = () => {
+      fetchBadges();
+    };
+    window.addEventListener('ticket_read', handleTicketRead);
+    return () => window.removeEventListener('ticket_read', handleTicketRead);
+  }, [fetchBadges]);
 
   // Returns an error message string on failure, null on success
   const handleLogin = async (email, password, role, rememberMe) => {
@@ -179,13 +228,20 @@ export default function App() {
   if (accessToken) {
     return (
       <div className="app">
-        <Sidebar activePage={activePage} setActivePage={setActivePage} onLogout={handleLogout} />
+        <Sidebar 
+          activePage={activePage} 
+          setActivePage={setActivePage} 
+          onLogout={handleLogout} 
+          unreadApps={badges.pendingApplications}
+          unreadPassengerTickets={badges.unreadPassengerTickets}
+          unreadDriverTickets={badges.unreadDriverTickets}
+        />
         <div className="main">
           <Topbar activePage={activePage} />
           <div className="content">
             {Object.entries(PAGE_MAP).map(([key, PageComponent]) => (
               <div key={key} className={`page${activePage === key ? ' active' : ''}`}>
-                <PageComponent />
+                <PageComponent isActive={activePage === key} />
               </div>
             ))}
           </div>

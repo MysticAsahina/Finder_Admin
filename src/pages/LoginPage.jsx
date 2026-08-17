@@ -20,11 +20,10 @@ function validatePassword(password) {
 }
 
 export default function LoginPage({ onLogin }) {
-  const defaultPassword = "adminTest";
 
   const [resetOpen, setResetOpen]   = useState(false)
   const [email, setEmail]           = useState();
-  const [password, setPassword]     = useState(defaultPassword);
+  const [password, setPassword]     = useState();
   const [error, setError]           = useState(null);
   const [loading, setLoading]       = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
