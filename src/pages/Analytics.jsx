@@ -101,7 +101,7 @@ export default function Analytics() {
     try {
       const res = await fetch(
         `${API_URL}/admin/analytics?month=${selectedMonth}&year=${selectedYear}`,
-        { headers: { Authorization: `Bearer ${accessToken}` } },
+        { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` } },
       )
       if (!res.ok) throw new Error(`Server error ${res.status}`)
       const json = await res.json()

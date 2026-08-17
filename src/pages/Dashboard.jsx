@@ -102,7 +102,7 @@ export default function Dashboard() {
     setError(null)
 
     fetch(`${API_URL}/admin/dashboard`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
     })
       .then(r => r.json())
       .then(json => {
