@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import Swal from 'sweetalert2';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -66,6 +67,7 @@ export default function OtpPage({ pendingToken, onVerify, onBack }) {
     const handleResend = async () => {
         setOtp(Array(OTP_LENGTH).fill(''));
         setError(null);
+        setLoading(true);
         inputs.current[0]?.focus();
 
         try {
@@ -75,15 +77,57 @@ export default function OtpPage({ pendingToken, onVerify, onBack }) {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${pendingToken}`,
                 },
+                credentials: "include",
             });
 
             if (!res.ok) {
-                const data = await res.json();
-                setError(data.message || 'Failed to resend OTP.');
+                let message = 'Failed to resend OTP.';
+                try {
+                    const data = await res.json();
+                    message = data.message || message;
+                } catch (_) { /* response wasn't JSON */ }
+                setError(message);
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'error',
+                    title: message,
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                    background: 'var(--white)',
+                    color: 'var(--text)',
+                });
+            } else {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: 'OTP Resent successfully!',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                    background: 'var(--white)',
+                    color: 'var(--text)',
+                });
             }
         } catch (err) {
-            setError('Failed to resend OTP.');
+            const message = 'Failed to resend OTP.';
+            setError(message);
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'error',
+                title: message,
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+                background: 'var(--white)',
+                color: 'var(--text)',
+            });
             console.error(err);
+        } finally {
+            setLoading(false);
         }
     };
 

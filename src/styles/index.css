@@ -657,3 +657,8 @@ tbody tr:hover{background:var(--brand-ll);}
 
 /* ── SWAL OVERRIDES ── */
 .swal-actions-gap { gap: 14px; }
+
+/* Fix sweetalert z-index for login/otp screens */
+.swal2-container {
+  z-index: 99999 !important;
+}
