@@ -194,11 +194,6 @@ export default function App() {
     setAuthStep('login');
   };
 
-  // To bypass OTP in testing — swap onVerify={handleOtpVerify} to this
-  const handleOtpBypass = () => {
-    setAuthStep('authenticated');
-  }
-
   const handleOtpBack = () => {
     setPendingToken(null);
     setAuthStep('login');
