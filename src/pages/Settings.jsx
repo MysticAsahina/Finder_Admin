@@ -13,7 +13,7 @@ const styledSwal = Swal.mixin({
   color: 'var(--text)'
 });
 
-const API_URL = import.meta.env.VITE_API_URL
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 // Validators for editable fields (can be expanded as needed)
 

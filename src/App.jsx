@@ -99,8 +99,8 @@ export default function App() {
     setAuthStep('login');
   }, [setAccessToken, setUser]);
 
-  // Set to 1 minute (60 * 1000) for testing as requested
-  useIdleTimer(silentLogout, 60 * 1000, sessionTimeoutEnabled && !!accessToken);
+  // Set to auto-logout after 30 minutes (30 * 60 * 1000)
+  useIdleTimer(silentLogout, 30 * 60 * 1000, sessionTimeoutEnabled && !!accessToken);
 
   // --- Socket.io notifications ---
   useEffect(() => {
@@ -165,7 +165,7 @@ export default function App() {
   // Returns an error message string on failure, null on success
   const handleLogin = async (email, password, role, rememberMe) => {
     try {
-      const res = await fetch("http://localhost:3000/auth/login", {
+      const res = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, role, rememberMe }),
@@ -202,7 +202,7 @@ export default function App() {
   const handleLogout = async () => {
     if (window.confirm('Are you sure you want to log out?')) {
       try {
-        await fetch("http://localhost:3000/auth/logout", {
+        await fetch(`${API_URL}/auth/logout`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
