@@ -22,6 +22,7 @@ export default function Messages({ role = "passenger" }) {
   const [selected, setSelected] = useState(null)
   const [messages, setMessages] = useState([])
   const [reply, setReply] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
   const [pendingMedia, setPendingMedia] = useState(null)
   const [isUploading, setIsUploading] = useState(false)
   const [previewImage, setPreviewImage] = useState(null)
@@ -310,14 +311,27 @@ export default function Messages({ role = "passenger" }) {
     return ticket.userId?.role || 'user'
   }
 
+  const filteredTickets = tickets.filter(t => {
+    if (!searchQuery) return true
+    const q = searchQuery.toLowerCase()
+    const name = getTicketName(t).toLowerCase()
+    const subject = (t.subject || '').toLowerCase()
+    return name.includes(q) || subject.includes(q)
+  })
+
   return (
     <div className="msg-layout">
       {/* Left sidebar — ticket list */}
       <div className="msg-list">
         <div className="msg-search">
-          <input type="text" placeholder="Search messages…" />
+          <input 
+            type="text" 
+            placeholder="Search messages…" 
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
         </div>
-        {tickets.map(t => (
+        {filteredTickets.map(t => (
           <div
             key={t._id}
             className={`msg-item${selected?._id === t._id ? ' active' : ''}`}

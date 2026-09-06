@@ -24,6 +24,8 @@ function validateMobile(mobileNumber) {
     return null;
 }
 
+const MAX_PASSWORD_LENGTH = 128
+
 function validatePassword(password) {
     if (!password) return 'Password is required.';
     if (password.length > MAX_PASSWORD_LENGTH) return 'Password is too long.';
