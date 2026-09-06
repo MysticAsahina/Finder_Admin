@@ -35,11 +35,15 @@ export default function Messages({ role = "passenger" }) {
 
     // 1. Fetch all support tickets
     async function loadTickets() {
-      const res = await fetch(`${API_URL}/support/tickets?role=${role}`, {
-        headers: { 'Authorization': `Bearer ${accessToken}` },
-      })
-      const data = await res.json()
-      setTickets(data.tickets || [])
+      try {
+        const res = await fetch(`${API_URL}/support/tickets?role=${role}`, {
+          headers: { 'Authorization': `Bearer ${accessToken}` },
+        })
+        const data = await res.json()
+        setTickets(data.tickets || [])
+      } catch (err) {
+        console.error("Error loading tickets:", err)
+      }
     }
     loadTickets()
 
@@ -108,17 +112,21 @@ export default function Messages({ role = "passenger" }) {
     window.dispatchEvent(new CustomEvent('ticket_read', { detail: selected._id }))
 
     async function loadMessages() {
-      const res = await fetch(
-        `${API_URL}/support/tickets/${selected._id}/messages`,
-        { headers: { 'Authorization': `Bearer ${accessToken}` } }
-      )
-      const data = await res.json()
-      setMessages(data.messages || [])
-      
-      // Update local ticket list to remove unread badge since we just fetched it
-      setTickets(prev => prev.map(t => 
-        t._id === selected._id ? { ...t, hasUnreadAdmin: false } : t
-      ))
+      try {
+        const res = await fetch(
+          `${API_URL}/support/tickets/${selected._id}/messages`,
+          { headers: { 'Authorization': `Bearer ${accessToken}` } }
+        )
+        const data = await res.json()
+        setMessages(data.messages || [])
+        
+        // Update local ticket list to remove unread badge since we just fetched it
+        setTickets(prev => prev.map(t => 
+          t._id === selected._id ? { ...t, hasUnreadAdmin: false } : t
+        ))
+      } catch (err) {
+        console.error("Error loading messages:", err)
+      }
     }
     loadMessages()
 

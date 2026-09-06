@@ -9,7 +9,7 @@ export default defineConfig({
         manualChunks: {
           react: ['react', 'react-dom'],
           chart: ['chart.js', 'react-chartjs-2'],
-          sweetalert: ['sweetalert2', 'sweetalert2-react-content'],
+          sweetalert: ['sweetalert2'],
           socketio: ['socket.io-client']
         }
       }

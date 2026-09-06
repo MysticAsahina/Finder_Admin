@@ -24,10 +24,13 @@ export default function Reports() {
   
   const years = Array.from({ length: 5 }, (_, i) => (currentYear - i).toString());
 
+  const [error, setError] = useState(null);
+
   const fetchReports = async () => {
     if (!accessToken) return;
     try {
       setLoading(true);
+      setError(null);
       const res = await fetch(`${API_URL}/admin/reports?month=${month}&year=${year}&page=${page}&limit=10`, {
         method: 'GET',
         headers: {
@@ -40,9 +43,12 @@ export default function Reports() {
         setTrips(data.trips);
         setStats(data.stats);
         setTotalPages(data.pagination.totalPages || 1);
+      } else {
+        setError(data.message || 'Failed to fetch reports');
       }
-    } catch (error) {
-      console.error("Error fetching reports:", error);
+    } catch (err) {
+      console.error("Error fetching reports:", err);
+      setError('Network error or server unavailable');
     } finally {
       setLoading(false);
     }
@@ -131,7 +137,9 @@ export default function Reports() {
             </tr>
           </thead>
           <tbody>
-            {loading ? (
+            {error ? (
+              <tr><td colSpan="7" style={{ padding:16, textAlign:'center', color:'red' }}>{error}</td></tr>
+            ) : loading ? (
               <tr><td colSpan="7" style={{ padding:16, textAlign:'center' }}>Loading...</td></tr>
             ) : trips.length === 0 ? (
               <tr><td colSpan="7" style={{ padding:16, textAlign:'center' }}>No trips found for this period.</td></tr>

@@ -23,28 +23,37 @@ export default function Drivers() {
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [sortMethod, setSortMethod] = useState('Sort by: Name');
 
+  const [error, setError] = useState(null);
   useEffect(() => {
     if (!accessToken) return;
     
     let cancelled = false;
     setLoading(true);
+    setError(null);
     
     fetch(`${API_URL}/admin/drivers`, {
       headers: { 'Authorization': `Bearer ${accessToken}` }
     })
       .then(r => r.json())
       .then(data => {
-        if (!cancelled && data.drivers) {
-          // Pre-compute avatar styles
-          const driversWithAvatars = data.drivers.map(d => ({
-            ...d,
-            avatarStyle: stringToColor(d._id),
-            badgeClass: d.status === 'Online' ? 'green' : d.status === 'Offline' ? 'gray' : 'yellow'
-          }));
-          setDrivers(driversWithAvatars);
+        if (!cancelled) {
+          if (data.drivers) {
+            // Pre-compute avatar styles
+            const driversWithAvatars = data.drivers.map(d => ({
+              ...d,
+              avatarStyle: stringToColor(d._id),
+              badgeClass: d.status === 'Online' ? 'green' : d.status === 'Offline' ? 'gray' : 'yellow'
+            }));
+            setDrivers(driversWithAvatars);
+          } else {
+            setError(data.message || 'Failed to load drivers');
+          }
         }
       })
-      .catch(console.error)
+      .catch(err => {
+        if (!cancelled) setError('Network error or server unavailable');
+        console.error(err);
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
@@ -91,7 +100,8 @@ export default function Drivers() {
         </select>
       </div>
 
-      {loading && <div style={{ padding: 20, textAlign: 'center', color: 'var(--muted)' }}>Loading drivers...</div>}
+      {error && <div style={{ padding: 20, textAlign: 'center', color: 'var(--red)' }}>{error}</div>}
+      {loading && !error && <div style={{ padding: 20, textAlign: 'center', color: 'var(--muted)' }}>Loading drivers...</div>}
 
       {!loading && (
         <div className="driver-grid">

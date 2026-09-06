@@ -214,29 +214,37 @@ export default function Applications() {
   }, [search])
 
   const handleApprove = async (id) => {
-    const res  = await fetch(`${API_URL}/admin/applications/${id}/approve`, {
-      method: 'POST',
-      headers: authHeaders(),
-    })
-    const data = await res.json()
-    if (res.ok) {
-      setApps(prev => prev.filter(a => a._id !== id))
-    } else {
-      alert(data.message || 'Approval failed.')
+    try {
+      const res  = await fetch(`${API_URL}/admin/applications/${id}/approve`, {
+        method: 'POST',
+        headers: authHeaders(),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setApps(prev => prev.filter(a => a._id !== id))
+      } else {
+        alert(data.message || 'Approval failed.')
+      }
+    } catch (err) {
+      alert('Network error or server unavailable.')
     }
   }
 
   const handleReject = async (id, reason) => {
-    const res  = await fetch(`${API_URL}/admin/applications/${id}/reject`, {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ reason }),
-    })
-    const data = await res.json()
-    if (res.ok) {
-      setApps(prev => prev.filter(a => a._id !== id))
-    } else {
-      alert(data.message || 'Rejection failed.')
+    try {
+      const res  = await fetch(`${API_URL}/admin/applications/${id}/reject`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ reason }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setApps(prev => prev.filter(a => a._id !== id))
+      } else {
+        alert(data.message || 'Rejection failed.')
+      }
+    } catch (err) {
+      alert('Network error or server unavailable.')
     }
   }
 
