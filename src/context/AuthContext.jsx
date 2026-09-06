@@ -15,6 +15,27 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Listen to the global fetch interceptor events
+  useEffect(() => {
+    const handleTokenRefreshed = (e) => {
+      setAccessToken(e.detail.accessToken);
+      setUser(e.detail.user);
+    };
+
+    const handleLogoutRequired = () => {
+      setAccessToken(null);
+      setUser(null);
+    };
+
+    window.addEventListener('token_refreshed', handleTokenRefreshed);
+    window.addEventListener('logout_required', handleLogoutRequired);
+
+    return () => {
+      window.removeEventListener('token_refreshed', handleTokenRefreshed);
+      window.removeEventListener('logout_required', handleLogoutRequired);
+    };
+  }, []);
+
   useEffect(() => {
     restoreSession();
   }, []);

@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import './api/fetchInterceptor' // Loads the global fetch interceptor
 import './styles/index.css'
 import App from './App.jsx'
 import { AuthProvider } from './context/AuthContext'
