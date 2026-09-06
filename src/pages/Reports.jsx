@@ -107,10 +107,10 @@ export default function Reports() {
 
       <div className="stat-grid" style={{ marginBottom:24 }}>
         {[
-          { label:'TOTAL TRIPS', val: stats.totalTrips.toLocaleString(), valStyle:{ color:'var(--brand)' }, trend:<span style={{ color:'var(--green)' }}>Filtered</span> },
-          { label:'COMPLETED', val: stats.completedTrips.toLocaleString(), valStyle:{ color:'var(--green)' }, trend:<span style={{ color:'var(--green)' }}>{stats.completedRate}% rate</span> },
-          { label:'AVG DAILY TRIP', val:'—', valStyle:{ color:'var(--text)' }, trend:<span style={{ color:'var(--text-light)' }}>Placeholder</span> },
-          { label:'Messages', val:'—', valStyle:{ color:'var(--text)' }, trend:<span style={{ color:'var(--text-light)' }}>Placeholder</span> },
+          { label:'TOTAL TRIPS', val: stats.totalTrips?.toLocaleString() || '0', valStyle:{ color:'var(--brand)' }, trend:<span style={{ color:'var(--green)' }}>Filtered</span> },
+          { label:'COMPLETED', val: stats.completedTrips?.toLocaleString() || '0', valStyle:{ color:'var(--green)' }, trend:<span style={{ color:'var(--green)' }}>{stats.completedRate || 0}% rate</span> },
+          { label:'AVG DAILY TRIPS', val: stats.averageDailyTrips?.toLocaleString() || '0', valStyle:{ color:'var(--text)' }, trend:<span style={{ color:'var(--text-light)' }}>Per day</span> },
+          { label:'MESSAGES', val: stats.totalMessages?.toLocaleString() || '0', valStyle:{ color:'var(--text)' }, trend:<span style={{ color:'var(--text-light)' }}>Chat & Support</span> },
         ].map((s,i) => (
           <div key={i} className="stat-card">
             <div className="stat-label">{s.label}</div>
