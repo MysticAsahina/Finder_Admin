@@ -63,12 +63,12 @@ const donutOptions = {
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
-/** Format a trend percentage like "↑ 14% vs last week" */
-function weekTrendText(pct) {
+/** Format a trend percentage like "↑ 14% vs last month" */
+function monthTrendText(pct) {
   if (pct === null || pct === undefined) return 'No previous data'
-  if (pct > 0) return `↑ ${pct}% vs last week`
-  if (pct < 0) return `↓ ${Math.abs(pct)}% vs last week`
-  return 'Same as last week'
+  if (pct > 0) return `↑ ${pct}% vs last month`
+  if (pct < 0) return `↓ ${Math.abs(pct)}% vs last month`
+  return 'Same as last month'
 }
 
 function trendClass(pct) {
@@ -173,20 +173,28 @@ export default function Analytics() {
 
   // ── stat cards ─────────────────────────────────────────────────────────────
 
+  function completionTrendData(curr, prev) {
+    if (prev === null || prev === undefined) return { text: 'No previous data', class: 'neutral' }
+    const diff = curr - prev
+    if (diff > 0) return { text: `↑ ${diff}% vs last month`, class: 'up' }
+    if (diff < 0) return { text: `↓ ${Math.abs(diff)}% vs last month`, class: 'down' }
+    return { text: 'Same as last month', class: 'neutral' }
+  }
+
   const statCards = data
     ? [
         {
-          label: "THIS WEEK'S TRIPS",
-          val: data.stats.thisWeekTrips.toLocaleString(),
-          trend: weekTrendText(data.stats.weekTrendPct),
-          trendClass: trendClass(data.stats.weekTrendPct),
+          label: "MONTHLY TRIPS",
+          val: data.stats.thisMonthTrips?.toLocaleString() || '0',
+          trend: monthTrendText(data.stats.monthTrendPct),
+          trendClass: trendClass(data.stats.monthTrendPct),
         },
         {
           label: 'COMPLETION RATE',
           val: `${data.stats.completionRate}%`,
           valClass: 'green',
-          trend: `${data.stats.completionRate >= 80 ? '↑' : '↓'} ${data.stats.completionRate}% this month`,
-          trendClass: data.stats.completionRate >= 80 ? 'up' : 'down',
+          trend: completionTrendData(data.stats.completionRate, data.stats.prevCompletionRate).text,
+          trendClass: completionTrendData(data.stats.completionRate, data.stats.prevCompletionRate).class,
         },
         {
           label: 'AVG DAILY TRIP',
