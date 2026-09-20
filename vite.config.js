@@ -10,9 +10,11 @@ export default defineConfig({
           react: ['react', 'react-dom'],
           chart: ['chart.js', 'react-chartjs-2'],
           sweetalert: ['sweetalert2'],
-          socketio: ['socket.io-client']
+          socketio: ['socket.io-client'],
+          pdf: ['jspdf', 'jspdf-autotable']
         }
       }
-    }
+    },
+    chunkSizeWarningLimit: 800
   }
 })
