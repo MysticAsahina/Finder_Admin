@@ -1,6 +1,8 @@
 import { useEffect, useState, useContext, useRef } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { io } from 'socket.io-client';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -64,7 +66,7 @@ function getActionInfo(action) {
 }
 
 export default function AuditLog() {
-  const { accessToken } = useContext(AuthContext);
+  const { accessToken, user } = useContext(AuthContext);
 
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -74,6 +76,19 @@ export default function AuditLog() {
   const [query, setQuery] = useState(''); // debounced search
   const [actionFilter, setActionFilter] = useState('All Actions');
   const [dateFilter, setDateFilter] = useState('All Time');
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const currentMonthName = new Date().toLocaleString('default', { month: 'long' });
+  const currentYear = new Date().getFullYear();
+  const [exportMonth, setExportMonth] = useState(currentMonthName);
+  const [exportYear, setExportYear] = useState(currentYear.toString());
+  const [exporting, setExporting] = useState(false);
+
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  const years = Array.from({ length: 5 }, (_, i) => (currentYear - i).toString());
 
   const socketRef = useRef(null);
 
@@ -89,10 +104,6 @@ export default function AuditLog() {
       setLogs(prev => {
         // Prevent duplicates
         if (prev.some(l => l._id === newLog._id)) return prev;
-        
-        // If a filter is applied, only prepend if it matches the filter conceptually
-        // To keep it simple and responsive, we just fetch again if filters are active, 
-        // or just blindly prepend. Blind prepend is fine for an admin watching the log.
         return [newLog, ...prev];
       });
     });
@@ -142,10 +153,104 @@ export default function AuditLog() {
     return () => { cancelled = true; };
   }, [query, actionFilter, dateFilter, accessToken]);
 
+  const generatePDF = async () => {
+    setExporting(true);
+    try {
+      const res = await fetch(`${API_URL}/admin/audit-logs?month=${exportMonth}&year=${exportYear}&limit=1000`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        }
+      });
+      const data = await res.json();
+      const exportLogs = data.logs || [];
+
+      const doc = new jsPDF();
+      
+      // Header
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(22);
+      doc.text("FINDER", 105, 20, { align: "center" });
+      
+      doc.setFontSize(14);
+      doc.text("SYSTEM ACTIVITY / AUDIT REPORT", 105, 30, { align: "center" });
+      doc.setFont("helvetica", "normal");
+      doc.text("MV Gallego TODA", 105, 38, { align: "center" });
+
+      // Meta Info
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.text("Report Period:", 14, 55);
+      doc.setFont("helvetica", "normal");
+      doc.text(`${exportMonth} ${exportYear}`, 42, 55);
+
+      doc.setFont("helvetica", "bold");
+      doc.text("Generated Date:", 14, 62);
+      doc.setFont("helvetica", "normal");
+      doc.text(new Date().toLocaleDateString('en-US'), 45, 62);
+
+      // Table Data
+      const tableData = exportLogs.map(log => {
+        const dateObj = new Date(log.createdAt);
+        return [
+          dateObj.toLocaleDateString('en-US'),
+          dateObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+          log.adminName || 'Admin',
+          "Admin", // Role
+          getActionInfo(log.action).label
+        ];
+      });
+
+      doc.autoTable({
+        startY: 70,
+        head: [["Date", "Time", "User", "Role", "Action"]],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+        styles: { fontSize: 10, cellPadding: 5 }
+      });
+
+      // Calculate summaries
+      const totalActivities = exportLogs.length;
+      const driverProcessed = exportLogs.filter(l => l.action === 'DRIVER_APPROVED' || l.action === 'DRIVER_REJECTED').length;
+      const systemChanges = exportLogs.filter(l => l.action === 'CONFIG_UPDATED' || l.action === 'UPDATE_FARE_SETTINGS').length;
+
+      // Summary Section
+      let finalY = doc.lastAutoTable.finalY || 70;
+      doc.setFont("helvetica", "bold");
+      doc.text("SUMMARY", 14, finalY + 15);
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      
+      doc.text(`Total Activities: ${totalActivities}`, 14, finalY + 23);
+      doc.text(`Driver Application Processed: ${driverProcessed}`, 70, finalY + 23);
+      doc.text(`System Changes: ${systemChanges}`, 150, finalY + 23);
+
+      // Footer
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.text("Generated by:", 14, finalY + 45);
+      doc.setFont("helvetica", "normal");
+      const adminName = user ? `${user.firstName} ${user.lastName}` : 'Admin';
+      doc.text(adminName, 42, finalY + 45);
+      
+      const textWidth = doc.getTextWidth(adminName);
+      doc.line(42, finalY + 46, 42 + Math.max(textWidth, 40), finalY + 46);
+
+      doc.save(`Audit_Report_${exportMonth}_${exportYear}.pdf`);
+      setIsModalOpen(false);
+    } catch(err) {
+      console.error(err);
+      alert("Failed to export PDF");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div>
-      <div className="toolbar" style={{ marginBottom:18 }}>
-        <div className="search-box">
+      <div className="toolbar" style={{ marginBottom:18, display:'flex', flexWrap:'wrap', gap:12 }}>
+        <div className="search-box" style={{ flexGrow: 1 }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input 
             type="text" 
@@ -166,7 +271,40 @@ export default function AuditLog() {
           <option>This Week</option>
           <option>This Month</option>
         </select>
+        <button className="btn btn-outline" onClick={() => setIsModalOpen(true)} style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 20px', fontWeight:600 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export PDF
+        </button>
       </div>
+
+      {/* Modal for PDF Export */}
+      {isModalOpen && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999
+        }}>
+          <div style={{ background: 'var(--bg)', padding: '24px', borderRadius: '8px', width: '320px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '16px' }}>Export Audit Report</h3>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-light)', marginBottom: '16px' }}>Select the month to generate the report for.</p>
+            
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
+              <select className="filter-select" style={{ flex: 1 }} value={exportMonth} onChange={e => setExportMonth(e.target.value)}>
+                {monthNames.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+              <select className="filter-select" style={{ flex: 1 }} value={exportYear} onChange={e => setExportYear(e.target.value)}>
+                {years.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button className="btn btn-outline" onClick={() => setIsModalOpen(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={generatePDF} disabled={exporting}>
+                {exporting ? 'Exporting...' : 'Generate PDF'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {loading && <div style={{ padding: '20px', textAlign: 'center', color: 'var(--muted)' }}>Loading...</div>}
       
