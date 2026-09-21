@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import ResetModal from '../components/ResetModal'
+import { Turnstile } from '@marsidev/react-turnstile'
 
 // Must match backend validation rules in auth.js
 const MAX_EMAIL_LENGTH = 254;
@@ -27,6 +28,7 @@ export default function LoginPage({ onLogin }) {
   const [error, setError]           = useState(null);
   const [loading, setLoading]       = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -39,9 +41,13 @@ export default function LoginPage({ onLogin }) {
     if (emailError) return setError(emailError);
     if (passwordError) return setError(passwordError);
 
+    if (!captchaToken) {
+      return setError("Please complete the CAPTCHA.");
+    }
+
     setLoading(true);
 
-    const serverError = await onLogin(email.trim(), password.trim(), "admin", rememberMe);
+    const serverError = await onLogin(email.trim(), password.trim(), "admin", rememberMe, captchaToken);
 
     if (serverError) {
       setError(serverError);
@@ -124,10 +130,21 @@ export default function LoginPage({ onLogin }) {
               </button>
             </div>
 
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+              <Turnstile 
+                siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY} 
+                onSuccess={(token) => setCaptchaToken(token)}
+                onError={() => setError('CAPTCHA failed to load. Please refresh.')}
+                options={{
+                  theme: 'light',
+                }}
+              />
+            </div>
+
             <button
               type="submit"
               className="btn btn-primary btn-login"
-              disabled={loading}
+              disabled={loading || !captchaToken}
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>

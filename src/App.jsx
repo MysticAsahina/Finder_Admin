@@ -163,12 +163,12 @@ export default function App() {
   }, [fetchBadges]);
 
   // Returns an error message string on failure, null on success
-  const handleLogin = async (email, password, role, rememberMe) => {
+  const handleLogin = async (email, password, role, rememberMe, captchaToken) => {
     try {
       const res = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, role, rememberMe }),
+        body: JSON.stringify({ email, password, role, rememberMe, captchaToken }),
       });
 
       const data = await res.json();
