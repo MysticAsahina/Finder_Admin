@@ -1,31 +1,117 @@
 import { useState, useEffect, useContext } from 'react'
+import Swal from 'sweetalert2'
 import DriverModal from '../components/DriverModal'
 import { AuthContext } from '../context/AuthContext'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
-// A small utility to generate a consistent pastel color for avatars based on driver ID or name
-function stringToColor(str) {
+// Sample drivers matching Screenshot 1 for fallback / preview
+const SAMPLE_DRIVERS = [
+  { id: 'DR-0012', name: 'Marco Santos', initials: 'MS', trips: 48, rate: '96%', rating: '4.9', status: 'Online', motorcycleBrand: 'Honda', plateNumber: 'TMX' },
+  { id: 'DR-0009', name: 'Pedro Cruz', initials: 'PC', trips: 43, rate: '91%', rating: '4.7', status: 'Online', motorcycleBrand: 'Kawasaki', plateNumber: 'Bajaj' },
+  { id: 'DR-0007', name: 'Jose Rivera', initials: 'JR', trips: 37, rate: '89%', rating: '4.8', status: 'Online', motorcycleBrand: 'Honda', plateNumber: 'TMX' },
+  { id: 'DR-0015', name: 'Luis Gomez', initials: 'LG', trips: 34, rate: '94%', rating: '5.0', status: 'Offline', motorcycleBrand: 'Honda', plateNumber: 'TMX' },
+  { id: 'DR-0011', name: 'Ramon Flores', initials: 'RF', trips: 29, rate: '83%', rating: '4.4', status: 'Online', motorcycleBrand: 'Kawasaki', plateNumber: 'Bajaj' },
+  { id: 'DR-0018', name: 'Marcelino Zafra', initials: 'MF', trips: 32, rate: '98%', rating: '4.9', status: 'Online', motorcycleBrand: 'Kawasaki', plateNumber: 'Bajaj' },
+  { id: 'DR-0123', name: 'Justine Castro', initials: 'JC', trips: 18, rate: '94%', rating: '4.7', status: 'Offline', motorcycleBrand: 'Kawasaki', plateNumber: 'Bajaj' },
+  { id: 'DR-0124', name: 'Michael Reyes', initials: 'MR', trips: 23, rate: '94%', rating: '4.7', status: 'Online', motorcycleBrand: 'Rusi', plateNumber: '125' },
+];
+
+// Sample flagged accounts matching Screenshot 2 & action menu
+const INITIAL_FLAGGED_ACCOUNTS = [
+  {
+    id: 'flg-1',
+    name: 'Juan Dela Cruz',
+    role: 'Passenger',
+    reason: 'Frequent Cancellation',
+    date: '02/24/2026',
+    status: 'Flagged'
+  },
+  {
+    id: 'flg-2',
+    name: 'John Mark Liwag',
+    role: 'Passenger',
+    reason: 'No-show Pattern',
+    date: '02/16/2026',
+    status: 'Flagged'
+  },
+  {
+    id: 'flg-3',
+    name: 'Maria Sumulong',
+    role: 'Passenger',
+    reason: 'Unresponsive',
+    date: '01/24/2026',
+    status: 'Flagged'
+  },
+  {
+    id: 'flg-4',
+    name: 'Antonio Santos',
+    role: 'Driver',
+    reason: 'Under Review',
+    date: '01/08/2026',
+    status: 'Under Review'
+  },
+];
+
+// Consistent pastel color for avatars based on driver ID or name
+function stringToColor(str = '') {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const hue = hash % 360;
+  const hue = Math.abs(hash % 360);
   return { background: `hsl(${hue}, 80%, 95%)`, color: `hsl(${hue}, 70%, 40%)` };
 }
 
 export default function Drivers() {
   const { accessToken } = useContext(AuthContext);
+  const [viewMode, setViewMode] = useState('drivers'); // 'drivers' | 'flagged'
   const [modalDriver, setModalDriver] = useState(null);
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All Status');
-  const [sortMethod, setSortMethod] = useState('Sort by: Name');
+  const [sortMethod, setSortMethod] = useState('Sort by: Trips');
+
+  // Flagged accounts state & active action popover menu
+  const [flaggedAccounts, setFlaggedAccounts] = useState(INITIAL_FLAGGED_ACCOUNTS);
+  const [flaggedRoleFilter, setFlaggedRoleFilter] = useState('All');
+  const [activeActionMenu, setActiveActionMenu] = useState(null);
 
   const [error, setError] = useState(null);
+
+  // Close action popup when clicking outside
   useEffect(() => {
-    if (!accessToken) return;
+    const handleOutsideClick = () => setActiveActionMenu(null);
+    window.addEventListener('click', handleOutsideClick);
+    return () => window.removeEventListener('click', handleOutsideClick);
+  }, []);
+
+  // Lock outer main content container scroll when viewing flagged accounts
+  useEffect(() => {
+    const contentEl = document.querySelector('.content');
+    if (!contentEl) return;
+    if (viewMode === 'flagged') {
+      contentEl.style.overflow = 'hidden';
+    } else {
+      contentEl.style.overflow = '';
+    }
+    return () => {
+      contentEl.style.overflow = '';
+    };
+  }, [viewMode]);
+
+  useEffect(() => {
+    if (!accessToken) {
+      // Use sample drivers if not authenticated
+      setDrivers(SAMPLE_DRIVERS.map(d => ({
+        ...d,
+        avatarStyle: stringToColor(d.id),
+        badgeClass: d.status === 'Online' ? 'green' : 'gray'
+      })));
+      setLoading(false);
+      return;
+    }
     
     let cancelled = false;
     setLoading(true);
@@ -37,21 +123,32 @@ export default function Drivers() {
       .then(r => r.json())
       .then(data => {
         if (!cancelled) {
-          if (data.drivers) {
-            // Pre-compute avatar styles
+          if (data.drivers && data.drivers.length > 0) {
             const driversWithAvatars = data.drivers.map(d => ({
               ...d,
-              avatarStyle: stringToColor(d._id),
+              avatarStyle: stringToColor(d._id || d.id),
               badgeClass: d.status === 'Online' ? 'green' : d.status === 'Offline' ? 'gray' : 'yellow'
             }));
             setDrivers(driversWithAvatars);
           } else {
-            setError(data.message || 'Failed to load drivers');
+            // Fallback to sample drivers if backend returns empty
+            setDrivers(SAMPLE_DRIVERS.map(d => ({
+              ...d,
+              avatarStyle: stringToColor(d.id),
+              badgeClass: d.status === 'Online' ? 'green' : 'gray'
+            })));
           }
         }
       })
       .catch(err => {
-        if (!cancelled) setError('Network error or server unavailable');
+        if (!cancelled) {
+          // If offline or network error, fallback gracefully to sample drivers
+          setDrivers(SAMPLE_DRIVERS.map(d => ({
+            ...d,
+            avatarStyle: stringToColor(d.id),
+            badgeClass: d.status === 'Online' ? 'green' : 'gray'
+          })));
+        }
         console.error(err);
       })
       .finally(() => {
@@ -61,85 +158,263 @@ export default function Drivers() {
     return () => { cancelled = true; };
   }, [accessToken]);
 
-  // Filtering and Sorting
-  let filtered = drivers.filter(d => 
+  // Action selection on flagged account popover
+  const handleSelectAction = (account, actionType) => {
+    setActiveActionMenu(null);
+
+    if (actionType === 'Clear Flag') {
+      setFlaggedAccounts(prev => prev.filter(a => a.id !== account.id));
+      Swal.fire({
+        title: 'Flag Cleared',
+        text: `Flag for ${account.name} has been removed.`,
+        icon: 'success',
+        timer: 1800,
+        showConfirmButton: false
+      });
+    } else if (actionType === 'Send Warning') {
+      setFlaggedAccounts(prev => prev.map(a => a.id === account.id ? { ...a, actionBadge: 'Send Warning' } : a));
+      Swal.fire({
+        title: 'Warning Sent',
+        text: `Warning notification has been issued to ${account.name}.`,
+        icon: 'info',
+        timer: 1800,
+        showConfirmButton: false
+      });
+    } else if (actionType === 'Temp. Restriction') {
+      setFlaggedAccounts(prev => prev.map(a => a.id === account.id ? { ...a, actionBadge: 'Temp. Restriction' } : a));
+      Swal.fire({
+        title: 'Account Restricted',
+        text: `${account.name}'s account has been placed under temporary restriction.`,
+        icon: 'warning',
+        timer: 1800,
+        showConfirmButton: false
+      });
+    }
+  };
+
+  // Drivers Filtering and Sorting
+  let filteredDrivers = drivers.filter(d => 
     d.name.toLowerCase().includes(search.toLowerCase()) || 
-    d.id.toLowerCase().includes(search.toLowerCase())
+    (d.id && d.id.toLowerCase().includes(search.toLowerCase()))
   );
 
   if (statusFilter !== 'All Status') {
-    filtered = filtered.filter(d => d.status === statusFilter);
+    filteredDrivers = filteredDrivers.filter(d => d.status.toLowerCase() === statusFilter.toLowerCase());
   }
 
-  filtered.sort((a, b) => {
-    if (sortMethod === 'Sort by: Trips') return b.trips - a.trips;
+  filteredDrivers.sort((a, b) => {
+    if (sortMethod === 'Sort by: Trips') return (b.trips || 0) - (a.trips || 0);
     return a.name.localeCompare(b.name);
   });
 
+  // Flagged accounts filtering
+  const filteredFlagged = flaggedAccounts.filter(acc => {
+    if (flaggedRoleFilter === 'All') return true;
+    return acc.role.toLowerCase() === flaggedRoleFilter.toLowerCase();
+  });
+
+  // Calculate empty rows to fill down to 15 lines like Screenshot 2
+  const emptyRowCount = Math.max(0, 15 - filteredFlagged.length);
+
   return (
     <>
-      <div className="toolbar">
-        <div className="search-box">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input 
-            type="text" 
-            placeholder="Search drivers…" 
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
+      {viewMode === 'flagged' ? (
+        /* ── FLAGGED ACCOUNTS VIEW (SCREENSHOT 2) ── */
+        <div className="flagged-container">
+          <div className="flagged-top-bar">
+            <button 
+              type="button"
+              className="flagged-back-btn" 
+              onClick={() => {
+                setActiveActionMenu(null);
+                setViewMode('drivers');
+              }}
+              title="Back to Users"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+              </svg>
+            </button>
+            <select 
+              className="filter-select" 
+              style={{ minWidth: 90 }}
+              value={flaggedRoleFilter} 
+              onChange={e => {
+                setActiveActionMenu(null);
+                setFlaggedRoleFilter(e.target.value);
+              }}
+            >
+              <option value="All">All</option>
+              <option value="Passenger">Passenger</option>
+              <option value="Driver">Driver</option>
+            </select>
+          </div>
+
+          <div className="flagged-title">Flagged Accounts</div>
+          <div className="flagged-subtitle">Accounts that has been flagged for repeated policy violations or suspicious activity.</div>
+
+          <div className="flagged-table-wrapper">
+            <table className="flagged-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '20%' }}>NAME</th>
+                  <th style={{ width: '18%' }}>ROLE</th>
+                  <th style={{ width: '28%' }}>REASON</th>
+                  <th style={{ width: '16%' }}>DATE</th>
+                  <th className="th-action" style={{ width: '18%' }}>ACTION</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredFlagged.map(account => (
+                  <tr key={account.id} style={{ position: 'relative', zIndex: activeActionMenu === account.id ? 99999 : 1 }}>
+                    <td>{account.name}</td>
+                    <td>{account.role}</td>
+                    <td>{account.reason}</td>
+                    <td>{account.date}</td>
+                    <td 
+                      className="td-action" 
+                      style={{ 
+                        position: 'relative', 
+                        zIndex: activeActionMenu === account.id ? 99999 : 1 
+                      }}
+                    >
+                      <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12 }}>
+                        {account.actionBadge && (
+                          <span className="flagged-status-badge">
+                            {account.actionBadge}
+                          </span>
+                        )}
+                        <button 
+                          type="button"
+                          className="flagged-action-pill" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveActionMenu(activeActionMenu === account.id ? null : account.id);
+                          }}
+                        >
+                          ACTION
+                        </button>
+                      </div>
+
+                      {/* Popover Action Menu */}
+                      {activeActionMenu === account.id && (
+                        <div className="action-dropdown-menu" onClick={(e) => e.stopPropagation()}>
+                          <button 
+                            type="button" 
+                            className="action-dropdown-item"
+                            onClick={() => handleSelectAction(account, 'Clear Flag')}
+                          >
+                            Clear Flag
+                          </button>
+                          <button 
+                            type="button" 
+                            className="action-dropdown-item"
+                            onClick={() => handleSelectAction(account, 'Send Warning')}
+                          >
+                            Send Warning
+                          </button>
+                          <button 
+                            type="button" 
+                            className="action-dropdown-item"
+                            onClick={() => handleSelectAction(account, 'Temp. Restriction')}
+                          >
+                            Temp. Restriction
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+
+                {/* Lined empty rows matching Screenshot 2 table sheet aesthetic */}
+                {Array.from({ length: emptyRowCount }).map((_, idx) => (
+                  <tr key={`empty-row-${idx}`} className="empty-row">
+                    <td colSpan={5}>&nbsp;</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-        <select className="filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-          <option>All Status</option>
-          <option>Online</option>
-          <option>Offline</option>
-          <option>Inactive</option>
-        </select>
-        <select className="filter-select" value={sortMethod} onChange={e => setSortMethod(e.target.value)}>
-          <option>Sort by: Name</option>
-          <option>Sort by: Trips</option>
-        </select>
-      </div>
+      ) : (
+        /* ── USERS / DRIVERS VIEW (SCREENSHOT 1) ── */
+        <>
+          <div className="toolbar">
+            <div className="search-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input 
+                type="text" 
+                placeholder="Search drivers…" 
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+            </div>
+            <button 
+              type="button"
+              className="btn-flagged"
+              onClick={() => setViewMode('flagged')}
+            >
+              Flagged Accounts
+            </button>
+            <select className="filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+              <option>All Status</option>
+              <option>Online</option>
+              <option>Offline</option>
+              <option>Inactive</option>
+            </select>
+            <select className="filter-select" value={sortMethod} onChange={e => setSortMethod(e.target.value)}>
+              <option>Sort by: Trips</option>
+              <option>Sort by: Name</option>
+            </select>
+          </div>
 
-      {error && <div style={{ padding: 20, textAlign: 'center', color: 'var(--red)' }}>{error}</div>}
-      {loading && !error && <div style={{ padding: 20, textAlign: 'center', color: 'var(--muted)' }}>Loading drivers...</div>}
+          {error && <div style={{ padding: 20, textAlign: 'center', color: 'var(--red)' }}>{error}</div>}
+          {loading && !error && <div style={{ padding: 20, textAlign: 'center', color: 'var(--muted)' }}>Loading drivers...</div>}
 
-      {!loading && (
-        <div className="driver-grid">
-          {filtered.map(d => {
-            return (
-              <div key={d.id} className="driver-card" onClick={() => setModalDriver(d)}>
-                <div className="driver-head">
-                  <div className="driver-avatar" style={d.avatarStyle}>{d.initials}</div>
-                  <div>
-                    <div className="driver-name">{d.name}</div>
-                    <div className="driver-id">{d.id}</div>
+          {!loading && (
+            <div className="driver-grid">
+              {filteredDrivers.map(d => {
+                return (
+                  <div key={d.id} className="driver-card" onClick={() => setModalDriver(d)}>
+                    <div className="driver-head">
+                      <div className="driver-avatar" style={d.avatarStyle}>{d.initials}</div>
+                      <div>
+                        <div className="driver-name">{d.name}</div>
+                        <div className="driver-id">{d.id}</div>
+                      </div>
+                      <div style={{ marginLeft:'auto' }}>
+                        <span className={`badge ${d.badgeClass}`}><span className="badge-dot"></span>{d.status}</span>
+                      </div>
+                    </div>
+                    <div className="driver-stats">
+                      <div className="driver-stat"><div className="driver-stat-val">{d.trips}</div><div className="driver-stat-lbl">Trips</div></div>
+                      <div className="driver-stat"><div className="driver-stat-val">{d.rate}</div><div className="driver-stat-lbl">Rate</div></div>
+                      <div className="driver-stat"><div className="driver-stat-val">{d.rating}</div><div className="driver-stat-lbl">Rating</div></div>
+                    </div>
+                    <div className="driver-foot">
+                      <span style={{ fontSize:'.75rem', color:'var(--muted)' }}>
+                        {d.motorcycleBrand || 'Unknown'} • {d.plateNumber || 'N/A'}
+                      </span>
+                      <button className="btn btn-ghost btn-sm" onClick={e => e.stopPropagation()} style={{ opacity: 0.5, cursor: 'not-allowed' }}>History</button>
+                    </div>
                   </div>
-                  <div style={{ marginLeft:'auto' }}>
-                    <span className={`badge ${d.badgeClass}`}><span className="badge-dot"></span>{d.status}</span>
-                  </div>
-                </div>
-                <div className="driver-stats">
-                  <div className="driver-stat"><div className="driver-stat-val">{d.trips}</div><div className="driver-stat-lbl">Trips</div></div>
-                  <div className="driver-stat"><div className="driver-stat-val">{d.rate}</div><div className="driver-stat-lbl">Rate</div></div>
-                  <div className="driver-stat"><div className="driver-stat-val">{d.rating}</div><div className="driver-stat-lbl">Rating</div></div>
-                </div>
-                <div className="driver-foot">
-                  <span style={{ fontSize:'.75rem', color:'var(--muted)' }}>
-                    {d.motorcycleBrand || 'Unknown'} • {d.plateNumber || 'N/A'}
-                  </span>
-                  <button className="btn btn-ghost btn-sm" onClick={e => e.stopPropagation()} style={{ opacity: 0.5, cursor: 'not-allowed' }}>History</button>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
+                )
+              })}
+            </div>
+          )}
 
-      {filtered.length === 0 && !loading && (
-         <div style={{ padding: 20, textAlign: 'center', color: 'var(--muted)' }}>No drivers found.</div>
-      )}
+          {filteredDrivers.length === 0 && !loading && (
+            <div style={{ padding: 20, textAlign: 'center', color: 'var(--muted)' }}>No drivers found.</div>
+          )}
 
-      <DriverModal isOpen={!!modalDriver} onClose={() => setModalDriver(null)} driver={modalDriver} />
+          <DriverModal isOpen={!!modalDriver} onClose={() => setModalDriver(null)} driver={modalDriver} />
+        </>
+      )}
     </>
   )
 }
+

@@ -11,6 +11,7 @@ import Dashboard from './pages/Dashboard'
 import Analytics from './pages/Analytics'
 import Drivers from './pages/Drivers'
 import Applications from './pages/Applications'
+import DiscountApplications from './pages/DiscountApplications'
 import PassengerMessages from './pages/Messages'
 import DriverMessages from './pages/DriverMessages'
 import Reports from './pages/Reports'
@@ -25,6 +26,7 @@ const PAGE_MAP = {
   analytics: Analytics,
   drivers: Drivers,
   applications: Applications,
+  discountApplications: DiscountApplications,
   passengerMessages: PassengerMessages,
   driverMessages: DriverMessages,
   reports: Reports,

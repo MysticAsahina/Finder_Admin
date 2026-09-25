@@ -10,6 +10,16 @@ export const AuthContext = createContext({
   setUser: () => {},
 });
 
+// DEV CONFIG: Set to true to bypass login/registration for frontend development without API
+export const DEV_BYPASS_AUTH = true;
+
+const MOCK_USER = {
+  id: 'dev-admin-id',
+  email: 'admin@finder.com',
+  role: 'admin',
+  name: 'Dev Admin'
+};
+
 export function AuthProvider({ children }) {
   const [accessToken, setAccessToken] = useState(null);
   const [user, setUser] = useState(null);
@@ -41,6 +51,13 @@ export function AuthProvider({ children }) {
   }, []);
 
   async function restoreSession() {
+    if (DEV_BYPASS_AUTH) {
+      setAccessToken('mock-dev-token');
+      setUser(MOCK_USER);
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch(`${API_URL}/auth/refresh`, {
         method: "POST",

@@ -3,8 +3,9 @@ import { useEffect, useState } from 'react'
 const PAGE_TITLES = {
   dashboard: ['Dashboard', 'Overview'],
   analytics: ['Analytics', 'Real-time Insights'],
-  drivers: ['Users', 'Driver Directory'],
+  drivers: ['Users', 'User Management'],
   applications: ['Applications', 'Pending Reviews'],
+  discountApplications: ['Applications', 'Special Discount'],
   passengerMessages: ['Messages', 'Passenger Inquiries'],
   driverMessages: ['Messages', 'Driver Inquiries'],
   reports: ['Reports', 'Operational Data'],
