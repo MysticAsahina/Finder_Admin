@@ -1,4 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useContext } from 'react';
+import { AuthContext } from '../context/AuthContext';
+
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+
 
 // 50 Sample Applications matching the user's requested screenshot format
 export const SAMPLE_DISCOUNT_APPLICATIONS = [
@@ -576,7 +580,7 @@ function getAppDetails(app) {
   const rawPhone = app.phone || '0917 234 5678';
   const mobileNumber = rawPhone.replace(/-/g, ' ');
 
-  let submittedStr = app.submitted || 'Sep 22, 2026 • 9:14 AM';
+  let submittedStr = app.submitted ? new Date(app.submitted).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'N/A';
   if (submittedStr.startsWith('September')) {
     submittedStr = submittedStr.replace('September', 'Sep');
   }
@@ -613,19 +617,10 @@ function getAppDetails(app) {
 }
 
 export default function DiscountApplications() {
-  const [applications, setApplications] = useState(() => {
-    try {
-      const saved = localStorage.getItem('finder_discount_applications');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length >= 50) return parsed;
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    return SAMPLE_DISCOUNT_APPLICATIONS;
-  });
-
+  const { authHeaders } = useContext(AuthContext);
+  const [applications, setApplications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
   const [activeFilter, setActiveFilter] = useState('All'); // 'All' | 'Pending' | 'Approved' | 'Rejected'
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('ALL'); // 'ALL' | 'Student' | 'Senior Citizen' | 'PWD'
@@ -633,14 +628,26 @@ export default function DiscountApplications() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
 
-  // Save changes to localStorage
-  useEffect(() => {
+  const fetchApplications = async () => {
+    setLoading(true);
     try {
-      localStorage.setItem('finder_discount_applications', JSON.stringify(applications));
+      const res = await fetch(`${API_URL}/admin/discount-applications`, {
+        headers: authHeaders(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setApplications(data);
+      }
     } catch (e) {
-      console.error(e);
+      console.error("Failed to fetch discount applications", e);
+    } finally {
+      setLoading(false);
     }
-  }, [applications]);
+  };
+
+  useEffect(() => {
+    fetchApplications();
+  }, []);
 
   // Status counts
   const counts = useMemo(() => {
@@ -688,33 +695,49 @@ export default function DiscountApplications() {
   const totalPages = Math.ceil(filteredApps.length / pageSize) || 1;
 
   // Actions
-  const handleUpdateStatus = (appId, newStatus, reason = '') => {
-    setApplications((prev) =>
-      prev.map((app) => {
-        if (app.id === appId) {
-          return {
-            ...app,
+  const handleUpdateStatus = async (appId, newStatus, reason = '') => {
+    try {
+      const res = await fetch(${API_URL}/admin/discount-applications/, {
+        method: 'PATCH',
+        headers: {
+          ...authHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus, reason })
+      });
+      if (res.ok) {
+        setApplications((prev) =>
+          prev.map((app) => {
+            if (app.id === appId) {
+              return {
+                ...app,
+                status: newStatus,
+                rejectionReason: reason || (newStatus === 'Rejected' ? 'Application rejected by Admin.' : undefined),
+              };
+            }
+            return app;
+          })
+        );
+        if (selectedApp && selectedApp.id === appId) {
+          setSelectedApp((prev) => ({
+            ...prev,
             status: newStatus,
             rejectionReason: reason || (newStatus === 'Rejected' ? 'Application rejected by Admin.' : undefined),
-          };
+          }));
         }
-        return app;
-      })
-    );
-    if (selectedApp && selectedApp.id === appId) {
-      setSelectedApp((prev) => ({
-        ...prev,
-        status: newStatus,
-        rejectionReason: reason || (newStatus === 'Rejected' ? 'Application rejected by Admin.' : undefined),
-      }));
+      } else {
+        const errData = await res.json();
+        alert(errData.message || 'Failed to update application status.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Network error while updating status.');
     }
   };
 
   const handleResetToDefault = () => {
-    if (window.confirm('Reset all 50 sample applications back to original state?')) {
-      setApplications(SAMPLE_DISCOUNT_APPLICATIONS);
-      localStorage.removeItem('finder_discount_applications');
-    }
+    fetchApplications();
+  }
   };
 
   return (
@@ -815,7 +838,7 @@ export default function DiscountApplications() {
 
                     {/* SUBMITTED */}
                     <td style={styles.td}>
-                      <span style={styles.submittedTxt}>{app.submitted}</span>
+                      <span style={styles.submittedTxt}>{app.submitted ? new Date(app.submitted).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'N/A'}</span>
                     </td>
 
                     {/* STATUS */}

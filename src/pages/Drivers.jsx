@@ -74,8 +74,9 @@ export default function Drivers() {
   const [sortMethod, setSortMethod] = useState('Sort by: Trips');
 
   // Flagged accounts state & active action popover menu
-  const [flaggedAccounts, setFlaggedAccounts] = useState(INITIAL_FLAGGED_ACCOUNTS);
+  const [flaggedAccounts, setFlaggedAccounts] = useState([]);
   const [flaggedRoleFilter, setFlaggedRoleFilter] = useState('All');
+  const [flaggedReasonFilter, setFlaggedReasonFilter] = useState('All');
   const [activeActionMenu, setActiveActionMenu] = useState(null);
 
   const [error, setError] = useState(null);
@@ -155,40 +156,72 @@ export default function Drivers() {
         if (!cancelled) setLoading(false);
       });
 
+    fetch(`${API_URL}/admin/flagged-accounts`, { headers: { 'Authorization': `Bearer ${accessToken}` } })
+      .then(r => r.json())
+      .then(data => {
+        if (!cancelled) setFlaggedAccounts(data);
+      })
+      .catch(err => console.error(err));
+
     return () => { cancelled = true; };
   }, [accessToken]);
 
   // Action selection on flagged account popover
-  const handleSelectAction = (account, actionType) => {
+  const handleSelectAction = async (account, actionType) => {
     setActiveActionMenu(null);
+    let backendAction = '';
+    
+    if (actionType === 'Clear Flag') backendAction = 'clear';
+    else if (actionType === 'Send Warning') backendAction = 'warning';
+    else if (actionType === 'Temp. Restriction') backendAction = 'restrict';
 
-    if (actionType === 'Clear Flag') {
-      setFlaggedAccounts(prev => prev.filter(a => a.id !== account.id));
-      Swal.fire({
-        title: 'Flag Cleared',
-        text: `Flag for ${account.name} has been removed.`,
-        icon: 'success',
-        timer: 1800,
-        showConfirmButton: false
+    if (!backendAction) return;
+
+    try {
+      const res = await fetch(`${API_URL}/admin/flagged-accounts/${account.id}/action`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ action: backendAction })
       });
-    } else if (actionType === 'Send Warning') {
-      setFlaggedAccounts(prev => prev.map(a => a.id === account.id ? { ...a, actionBadge: 'Send Warning' } : a));
-      Swal.fire({
-        title: 'Warning Sent',
-        text: `Warning notification has been issued to ${account.name}.`,
-        icon: 'info',
-        timer: 1800,
-        showConfirmButton: false
-      });
-    } else if (actionType === 'Temp. Restriction') {
-      setFlaggedAccounts(prev => prev.map(a => a.id === account.id ? { ...a, actionBadge: 'Temp. Restriction' } : a));
-      Swal.fire({
-        title: 'Account Restricted',
-        text: `${account.name}'s account has been placed under temporary restriction.`,
-        icon: 'warning',
-        timer: 1800,
-        showConfirmButton: false
-      });
+
+      if (!res.ok) {
+        throw new Error('Action failed');
+      }
+
+      if (actionType === 'Clear Flag') {
+        setFlaggedAccounts(prev => prev.filter(a => a.id !== account.id));
+        Swal.fire({
+          title: 'Flag Cleared',
+          text: `Flag for ${account.name} has been removed.`,
+          icon: 'success',
+          timer: 1800,
+          showConfirmButton: false
+        });
+      } else if (actionType === 'Send Warning') {
+        setFlaggedAccounts(prev => prev.map(a => a.id === account.id ? { ...a, actionBadge: 'Send Warning' } : a));
+        Swal.fire({
+          title: 'Warning Sent',
+          text: `Warning notification has been issued to ${account.name}.`,
+          icon: 'info',
+          timer: 1800,
+          showConfirmButton: false
+        });
+      } else if (actionType === 'Temp. Restriction') {
+        setFlaggedAccounts(prev => prev.map(a => a.id === account.id ? { ...a, actionBadge: 'Temp. Restriction', status: 'Restricted' } : a));
+        Swal.fire({
+          title: 'Account Restricted',
+          text: `${account.name}'s account has been placed under temporary restriction.`,
+          icon: 'warning',
+          timer: 1800,
+          showConfirmButton: false
+        });
+      }
+    } catch (e) {
+      console.error(e);
+      Swal.fire({ title: 'Error', text: 'Failed to apply action.', icon: 'error' });
     }
   };
 
@@ -209,8 +242,9 @@ export default function Drivers() {
 
   // Flagged accounts filtering
   const filteredFlagged = flaggedAccounts.filter(acc => {
-    if (flaggedRoleFilter === 'All') return true;
-    return acc.role.toLowerCase() === flaggedRoleFilter.toLowerCase();
+    const matchRole = flaggedRoleFilter === 'All' || acc.role.toLowerCase() === flaggedRoleFilter.toLowerCase();
+    const matchReason = flaggedReasonFilter === 'All' || acc.reason.toLowerCase() === flaggedReasonFilter.toLowerCase();
+    return matchRole && matchReason;
   });
 
   // Calculate empty rows to fill down to 15 lines like Screenshot 2
@@ -245,9 +279,24 @@ export default function Drivers() {
                 setFlaggedRoleFilter(e.target.value);
               }}
             >
-              <option value="All">All</option>
+              <option value="All">All Roles</option>
               <option value="Passenger">Passenger</option>
               <option value="Driver">Driver</option>
+            </select>
+            <select 
+              className="filter-select" 
+              style={{ minWidth: 150 }}
+              value={flaggedReasonFilter} 
+              onChange={e => {
+                setActiveActionMenu(null);
+                setFlaggedReasonFilter(e.target.value);
+              }}
+            >
+              <option value="All">All Reasons</option>
+              <option value="Frequent Cancellation">Frequent Cancellation</option>
+              <option value="No-show Pattern">No-show Pattern</option>
+              <option value="Unresponsive">Unresponsive</option>
+              <option value="Under Review">Under Review</option>
             </select>
           </div>
 
