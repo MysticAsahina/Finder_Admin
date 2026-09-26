@@ -697,7 +697,7 @@ export default function DiscountApplications() {
   // Actions
   const handleUpdateStatus = async (appId, newStatus, reason = '') => {
     try {
-      const res = await fetch(${API_URL}/admin/discount-applications/, {
+      const res = await fetch(`${API_URL}/admin/discount-applications/${appId}`, {
         method: 'PATCH',
         headers: {
           ...authHeaders(),
@@ -737,7 +737,6 @@ export default function DiscountApplications() {
 
   const handleResetToDefault = () => {
     fetchApplications();
-  }
   };
 
   return (
