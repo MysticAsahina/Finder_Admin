@@ -189,10 +189,10 @@ export default function FareManagement() {
   }
 
   // Live fare preview calculation
-  const previewDistance = 3 // km
+  const previewDistance = 4 // km
   const bf = parseFloat(baseFare) || 0
   const pk = parseFloat(perKmFare) || 0
-  const baseDistance = 2
+  const baseDistance = 3
   const previewFare = (bf + Math.max(0, previewDistance - baseDistance) * pk).toFixed(2)
 
   if (loading) {
