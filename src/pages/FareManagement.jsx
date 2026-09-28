@@ -193,7 +193,7 @@ export default function FareManagement() {
   const bf = parseFloat(baseFare) || 0
   const pk = parseFloat(perKmFare) || 0
   const baseDistance = 3
-  const previewFare = (bf + Math.max(0, previewDistance - baseDistance) * pk).toFixed(2)
+  const previewFare = (bf + Math.max(0, Math.ceil(previewDistance - baseDistance)) * pk).toFixed(2)
 
   if (loading) {
     return (
