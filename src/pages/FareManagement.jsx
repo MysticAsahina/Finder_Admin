@@ -130,8 +130,8 @@ export default function FareManagement() {
       return
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setError('File size must be less than 5MB.')
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File size must be less than 10MB.')
       if (fileInputRef.current) fileInputRef.current.value = ''
       return
     }
@@ -295,7 +295,7 @@ export default function FareManagement() {
                 <line x1="16" y1="17" x2="8" y2="17"/>
               </svg>
               <div style={{ fontSize:'.78rem', color:'var(--subtle)', marginTop:8 }}>No Document Uploaded</div>
-              <div style={{ fontSize:'.72rem', color:'var(--border)', marginTop:2 }}>Upload PDF or Image</div>
+              <div style={{ fontSize:'.72rem', color:'var(--border)', marginTop:2 }}>Upload PDF (Max 10MB)</div>
             </div>
           )}
         </div>
