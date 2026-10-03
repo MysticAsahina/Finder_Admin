@@ -617,7 +617,7 @@ function getAppDetails(app) {
 }
 
 export default function DiscountApplications() {
-  const { authHeaders } = useContext(AuthContext);
+  const { accessToken } = useContext(AuthContext);
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -632,7 +632,7 @@ export default function DiscountApplications() {
     setLoading(true);
     try {
       const res = await fetch(`${API_URL}/admin/discount-applications`, {
-        headers: authHeaders(),
+        headers: { 'Authorization': `Bearer ${accessToken}` },
       });
       if (res.ok) {
         const data = await res.json();
@@ -700,7 +700,7 @@ export default function DiscountApplications() {
       const res = await fetch(`${API_URL}/admin/discount-applications/${appId}`, {
         method: 'PATCH',
         headers: {
-          ...authHeaders(),
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ status: newStatus, reason })

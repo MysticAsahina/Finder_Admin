@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import Swal from 'sweetalert2';
 
@@ -57,6 +57,15 @@ export default function Settings() {
   const [mobileNumber, setMobileNumber] = useState(user?.mobileNumber || 'N/A');
   const [email, setEmail] = useState(user?.email || 'N/A');
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setFirstName(user.firstName || 'N/A');
+      setLastName(user.lastName || 'N/A');
+      setMobileNumber(user.mobileNumber || 'N/A');
+      setEmail(user.email || 'N/A');
+    }
+  }, [user]);
 
     const confirmSave = () => {
         // Client-side validation
