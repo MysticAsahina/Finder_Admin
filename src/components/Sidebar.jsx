@@ -14,7 +14,7 @@ const PAGE_TITLES = {
   settings: ['Settings', 'Admin Preferences'],
 }
 
-export default function Sidebar({ activePage, setActivePage, onLogout, unreadApps, unreadPassengerTickets, unreadDriverTickets }) {
+export default function Sidebar({ activePage, setActivePage, onLogout, unreadApps, unreadDiscountApps, unreadPassengerTickets, unreadDriverTickets }) {
   const { user } = useContext(AuthContext);
   const [firstName, setFirstName] = useState(user?.firstName || 'N/A');
   const [lastName, setLastName] = useState(user?.lastName || 'N/A');
@@ -52,7 +52,7 @@ export default function Sidebar({ activePage, setActivePage, onLogout, unreadApp
         {
           id: 'discountApplications',
           label: 'Discount Applications',
-          badge: 18,
+          badge: unreadDiscountApps > 0 ? unreadDiscountApps : null,
           icon: (
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
               <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />

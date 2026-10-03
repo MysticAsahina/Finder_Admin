@@ -44,6 +44,7 @@ export default function App() {
   // --- Badge State ---
   const [badges, setBadges] = useState({
     pendingApplications: 0,
+    pendingDiscountApplications: 0,
     unreadPassengerTickets: 0,
     unreadDriverTickets: 0
   });
@@ -58,6 +59,7 @@ export default function App() {
       if (data.success) {
         setBadges({
           pendingApplications: data.pendingApplications,
+          pendingDiscountApplications: data.pendingDiscountApplications,
           unreadPassengerTickets: data.unreadPassengerTickets,
           unreadDriverTickets: data.unreadDriverTickets
         });
@@ -230,6 +232,7 @@ export default function App() {
           setActivePage={setActivePage} 
           onLogout={handleLogout} 
           unreadApps={badges.pendingApplications}
+          unreadDiscountApps={badges.pendingDiscountApplications}
           unreadPassengerTickets={badges.unreadPassengerTickets}
           unreadDriverTickets={badges.unreadDriverTickets}
         />
