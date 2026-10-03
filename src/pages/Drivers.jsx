@@ -79,6 +79,10 @@ export default function Drivers() {
   const [flaggedReasonFilter, setFlaggedReasonFilter] = useState('All');
   const [activeActionMenu, setActiveActionMenu] = useState(null);
 
+  // Suspended accounts state
+  const [suspendedAccounts, setSuspendedAccounts] = useState([]);
+  const [suspendedRoleFilter, setSuspendedRoleFilter] = useState('All');
+
   const [error, setError] = useState(null);
 
   // Close action popup when clicking outside
@@ -163,17 +167,53 @@ export default function Drivers() {
       })
       .catch(err => console.error(err));
 
+    fetch(`${API_URL}/admin/suspended-accounts`, { headers: { 'Authorization': `Bearer ${accessToken}` } })
+      .then(r => r.json())
+      .then(data => {
+        if (!cancelled && Array.isArray(data)) setSuspendedAccounts(data);
+      })
+      .catch(err => console.error(err));
+
     return () => { cancelled = true; };
   }, [accessToken]);
 
-  // Action selection on flagged account popover
   const handleSelectAction = async (account, actionType) => {
     setActiveActionMenu(null);
     let backendAction = '';
+    let payload = {};
     
-    if (actionType === 'Clear Flag') backendAction = 'clear';
-    else if (actionType === 'Send Warning') backendAction = 'warning';
-    else if (actionType === 'Temp. Restriction') backendAction = 'restrict';
+    if (actionType === 'Clear Flag') {
+      backendAction = 'clear';
+    } else if (actionType === 'Temporary Suspension') {
+      const { value: days, isConfirmed } = await Swal.fire({
+        title: 'Temporary Suspension',
+        text: 'Enter suspension duration (min 3 days, max 30 days):',
+        input: 'number',
+        inputAttributes: { min: 3, max: 30, step: 1 },
+        showCancelButton: true,
+        inputValidator: (value) => {
+          if (!value || value < 3 || value > 30) {
+            return 'Please enter a valid number between 3 and 30';
+          }
+        }
+      });
+      if (!isConfirmed || !days) return;
+      backendAction = 'temp_suspend';
+      payload = { durationDays: parseInt(days) };
+    } else if (actionType === 'Suspend Until Resolved') {
+      backendAction = 'suspend_resolved';
+    } else if (actionType === 'Permanent Suspension') {
+      const { isConfirmed } = await Swal.fire({
+        title: 'Permanent Suspension',
+        text: `Are you sure you want to permanently suspend ${account.name}? This action is unappealable.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'Yes, permanently suspend'
+      });
+      if (!isConfirmed) return;
+      backendAction = 'perm_suspend';
+    }
 
     if (!backendAction) return;
 
@@ -184,7 +224,7 @@ export default function Drivers() {
           'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ action: backendAction })
+        body: JSON.stringify({ action: backendAction, ...payload })
       });
 
       if (!res.ok) {
@@ -193,35 +233,49 @@ export default function Drivers() {
 
       if (actionType === 'Clear Flag') {
         setFlaggedAccounts(prev => prev.filter(a => a.id !== account.id));
-        Swal.fire({
-          title: 'Flag Cleared',
-          text: `Flag for ${account.name} has been removed.`,
-          icon: 'success',
-          timer: 1800,
-          showConfirmButton: false
-        });
-      } else if (actionType === 'Send Warning') {
-        setFlaggedAccounts(prev => prev.map(a => a.id === account.id ? { ...a, actionBadge: 'Send Warning' } : a));
-        Swal.fire({
-          title: 'Warning Sent',
-          text: `Warning notification has been issued to ${account.name}.`,
-          icon: 'info',
-          timer: 1800,
-          showConfirmButton: false
-        });
-      } else if (actionType === 'Temp. Restriction') {
-        setFlaggedAccounts(prev => prev.map(a => a.id === account.id ? { ...a, actionBadge: 'Temp. Restriction', status: 'Restricted' } : a));
-        Swal.fire({
-          title: 'Account Restricted',
-          text: `${account.name}'s account has been placed under temporary restriction.`,
-          icon: 'warning',
-          timer: 1800,
-          showConfirmButton: false
-        });
+        Swal.fire({ title: 'Flag Cleared', text: `Flag for ${account.name} has been removed.`, icon: 'success', timer: 1800, showConfirmButton: false });
+      } else if (actionType === 'Temporary Suspension') {
+        setFlaggedAccounts(prev => prev.map(a => a.id === account.id ? { ...a, actionBadge: 'Temp Suspended', status: 'Suspended' } : a));
+        Swal.fire({ title: 'Temporarily Suspended', text: `${account.name} has been suspended for ${payload.durationDays} days.`, icon: 'warning', timer: 2000, showConfirmButton: false });
+      } else if (actionType === 'Suspend Until Resolved') {
+        setFlaggedAccounts(prev => prev.map(a => a.id === account.id ? { ...a, actionBadge: 'Suspended (Resolved)', status: 'Suspended' } : a));
+        Swal.fire({ title: 'Suspended Until Resolved', text: `${account.name} has been suspended indefinitely until resolved.`, icon: 'warning', timer: 2000, showConfirmButton: false });
+      } else if (actionType === 'Permanent Suspension') {
+        setFlaggedAccounts(prev => prev.map(a => a.id === account.id ? { ...a, actionBadge: 'Perm Suspended', status: 'Suspended' } : a));
+        Swal.fire({ title: 'Permanently Suspended', text: `${account.name} has been permanently banned.`, icon: 'error', timer: 2000, showConfirmButton: false });
       }
     } catch (e) {
       console.error(e);
       Swal.fire({ title: 'Error', text: 'Failed to apply action.', icon: 'error' });
+    }
+  };
+
+  const handleLiftSuspension = async (account) => {
+    const { isConfirmed } = await Swal.fire({
+      title: 'Lift Suspension',
+      text: `Are you sure you want to lift the suspension for ${account.name}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, lift it'
+    });
+
+    if (!isConfirmed) return;
+
+    try {
+      const res = await fetch(`${API_URL}/admin/suspended-accounts/${account.id}/lift`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
+      
+      if (!res.ok) throw new Error('Failed to lift suspension');
+      
+      setSuspendedAccounts(prev => prev.filter(a => a.id !== account.id));
+      Swal.fire({ title: 'Suspension Lifted', text: `${account.name}'s account has been restored.`, icon: 'success', timer: 2000, showConfirmButton: false });
+    } catch (e) {
+      console.error(e);
+      Swal.fire({ title: 'Error', text: 'Failed to lift suspension.', icon: 'error' });
     }
   };
 
@@ -249,6 +303,13 @@ export default function Drivers() {
 
   // Calculate empty rows to fill down to 15 lines like Screenshot 2
   const emptyRowCount = Math.max(0, 15 - filteredFlagged.length);
+
+  // Suspended accounts filtering
+  const filteredSuspended = suspendedAccounts.filter(acc => {
+    const matchRole = suspendedRoleFilter === 'All' || acc.role.toLowerCase() === suspendedRoleFilter.toLowerCase();
+    return matchRole;
+  });
+  const emptySuspendedRowCount = Math.max(0, 15 - filteredSuspended.length);
 
   return (
     <>
@@ -294,9 +355,8 @@ export default function Drivers() {
             >
               <option value="All">All Reasons</option>
               <option value="Frequent Cancellation">Frequent Cancellation</option>
-              <option value="No-show Pattern">No-show Pattern</option>
-              <option value="Unresponsive">Unresponsive</option>
-              <option value="Under Review">Under Review</option>
+              <option value="Unresponsive Passenger">Unresponsive Passenger</option>
+              <option value="Unresponsive Driver">Unresponsive Driver</option>
             </select>
           </div>
 
@@ -352,23 +412,30 @@ export default function Drivers() {
                           <button 
                             type="button" 
                             className="action-dropdown-item"
+                            onClick={() => handleSelectAction(account, 'Temporary Suspension')}
+                          >
+                            Temporary Suspension
+                          </button>
+                          <button 
+                            type="button" 
+                            className="action-dropdown-item"
+                            onClick={() => handleSelectAction(account, 'Suspend Until Resolved')}
+                          >
+                            Suspend Until Resolved
+                          </button>
+                          <button 
+                            type="button" 
+                            className="action-dropdown-item"
+                            onClick={() => handleSelectAction(account, 'Permanent Suspension')}
+                          >
+                            Permanent Suspension
+                          </button>
+                          <button 
+                            type="button" 
+                            className="action-dropdown-item"
                             onClick={() => handleSelectAction(account, 'Clear Flag')}
                           >
                             Clear Flag
-                          </button>
-                          <button 
-                            type="button" 
-                            className="action-dropdown-item"
-                            onClick={() => handleSelectAction(account, 'Send Warning')}
-                          >
-                            Send Warning
-                          </button>
-                          <button 
-                            type="button" 
-                            className="action-dropdown-item"
-                            onClick={() => handleSelectAction(account, 'Temp. Restriction')}
-                          >
-                            Temp. Restriction
                           </button>
                         </div>
                       )}
@@ -380,6 +447,82 @@ export default function Drivers() {
                 {Array.from({ length: emptyRowCount }).map((_, idx) => (
                   <tr key={`empty-row-${idx}`} className="empty-row">
                     <td colSpan={5}>&nbsp;</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : viewMode === 'suspended' ? (
+        /* ── SUSPENDED ACCOUNTS VIEW ── */
+        <div className="flagged-container">
+          <div className="flagged-top-bar">
+            <button 
+              type="button"
+              className="flagged-back-btn" 
+              onClick={() => {
+                setActiveActionMenu(null);
+                setViewMode('drivers');
+              }}
+              title="Back to Users"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+              </svg>
+            </button>
+            <select 
+              className="filter-select" 
+              style={{ minWidth: 90 }}
+              value={suspendedRoleFilter} 
+              onChange={e => {
+                setSuspendedRoleFilter(e.target.value);
+              }}
+            >
+              <option value="All">All Roles</option>
+              <option value="Passenger">Passenger</option>
+              <option value="Driver">Driver</option>
+            </select>
+          </div>
+
+          <div className="flagged-title">Suspended Accounts</div>
+          <div className="flagged-subtitle">Accounts that have been suspended from the platform.</div>
+
+          <div className="flagged-table-wrapper">
+            <table className="flagged-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '25%' }}>NAME</th>
+                  <th style={{ width: '20%' }}>ROLE</th>
+                  <th style={{ width: '30%' }}>SUSPENSION TYPE</th>
+                  <th style={{ width: '25%', textAlign: 'right', paddingRight: '20px' }}>LIFT ACTION</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredSuspended.map(account => (
+                  <tr key={account.id}>
+                    <td>{account.name}</td>
+                    <td>{account.role}</td>
+                    <td>
+                      <span className="flagged-status-badge">
+                        {account.suspensionType || 'Suspended'}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: 'right', paddingRight: '20px' }}>
+                      {account.suspensionType !== 'Permanent Suspension' && (
+                        <button 
+                          className="flagged-action-pill" 
+                          onClick={() => handleLiftSuspension(account)}
+                        >
+                          LIFT SUSPENSION
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {Array.from({ length: emptySuspendedRowCount }).map((_, idx) => (
+                  <tr key={`empty-suspended-row-${idx}`} className="empty-row">
+                    <td colSpan={4}>&nbsp;</td>
                   </tr>
                 ))}
               </tbody>
@@ -408,6 +551,14 @@ export default function Drivers() {
               onClick={() => setViewMode('flagged')}
             >
               Flagged Accounts
+            </button>
+            <button 
+              type="button"
+              className="btn-flagged"
+              style={{ marginLeft: '8px' }}
+              onClick={() => setViewMode('suspended')}
+            >
+              Suspended Accounts
             </button>
             <select className="filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
               <option>All Status</option>
