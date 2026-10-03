@@ -3,7 +3,7 @@ import { AuthContext } from '../context/AuthContext'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
-export default function FareManagement() {
+export default function FareManagement({ isActive }) {
   const { accessToken } = useContext(AuthContext)
 
   const [baseFare, setBaseFare] = useState('')
@@ -32,6 +32,8 @@ export default function FareManagement() {
   }
 
   useEffect(() => {
+    if (!isActive) return
+
     setLoading(true)
     setError(null)
     fetch(`${API_URL}/admin/settings/fare`, { headers: authHeaders() })
@@ -51,7 +53,7 @@ export default function FareManagement() {
       })
       .catch(() => setError('Unable to reach the server.'))
       .finally(() => setLoading(false))
-  }, [accessToken])
+  }, [accessToken, isActive])
 
   const hasChanges = baseFare !== origBaseFare || perKmFare !== origPerKmFare || ordinanceUrl !== origOrdinanceUrl
 

@@ -16,7 +16,7 @@ const styledSwal = Swal.mixin({
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
-export default function Messages({ role = "passenger" }) {
+export default function Messages({ role = "passenger", isActive }) {
   const { accessToken } = useContext(AuthContext)
   const [tickets, setTickets] = useState([])
   const [selected, setSelected] = useState(null)
@@ -104,6 +104,27 @@ export default function Messages({ role = "passenger" }) {
       socketRef.current = socket
       return () => socket.disconnect()
     }, [accessToken, role])
+
+  // Reload the ticket list whenever the admin returns to this tab, so it
+  // doesn't go stale while they were away (the socket above stays connected
+  // the whole time and keeps it updated in real time, but this covers
+  // anything missed e.g. around a reconnect).
+  useEffect(() => {
+    if (!isActive || !accessToken) return
+
+    async function reloadTickets() {
+      try {
+        const res = await fetch(`${API_URL}/support/tickets?role=${role}`, {
+          headers: { 'Authorization': `Bearer ${accessToken}` },
+        })
+        const data = await res.json()
+        setTickets(data.tickets || [])
+      } catch (err) {
+        console.error("Error reloading tickets:", err)
+      }
+    }
+    reloadTickets()
+  }, [isActive, accessToken, role])
 
   useEffect(() => {
     if (!selected || !accessToken) return

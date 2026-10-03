@@ -616,7 +616,7 @@ function getAppDetails(app) {
   };
 }
 
-export default function DiscountApplications() {
+export default function DiscountApplications({ isActive }) {
   const { accessToken } = useContext(AuthContext);
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -646,8 +646,9 @@ export default function DiscountApplications() {
   };
 
   useEffect(() => {
+    if (!isActive) return;
     fetchApplications();
-  }, []);
+  }, [isActive]);
 
   // Status counts
   const counts = useMemo(() => {
@@ -770,14 +771,14 @@ export default function DiscountApplications() {
             { key: 'Approved', label: 'Approved', count: counts.approved },
             { key: 'Rejected', label: 'Rejected', count: counts.rejected },
           ].map((tab) => {
-            const isActive = activeFilter === tab.key;
+            const isFilterActive = activeFilter === tab.key;
             return (
               <button
                 key={tab.key}
                 onClick={() => setActiveFilter(tab.key)}
                 style={{
                   ...styles.filterTabBtn,
-                  ...(isActive ? styles.filterTabBtnActive : {}),
+                  ...(isFilterActive ? styles.filterTabBtnActive : {}),
                 }}
               >
                 {tab.label}

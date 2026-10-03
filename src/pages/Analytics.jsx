@@ -84,7 +84,7 @@ function statusClass(status) {
 
 // ─── component ───────────────────────────────────────────────────────────────
 
-export default function Analytics() {
+export default function Analytics({ isActive }) {
   const now = new Date()
   const { accessToken } = useContext(AuthContext)
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1) // 1-indexed
@@ -114,7 +114,10 @@ export default function Analytics() {
     }
   }, [selectedMonth, selectedYear])
 
-  useEffect(() => { fetchAnalytics() }, [fetchAnalytics])
+  useEffect(() => {
+    if (!isActive) return
+    fetchAnalytics()
+  }, [fetchAnalytics, isActive])
 
   // ── derived chart data ─────────────────────────────────────────────────────
 

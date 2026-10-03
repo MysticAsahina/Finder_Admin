@@ -65,7 +65,7 @@ function getActionInfo(action) {
   }
 }
 
-export default function AuditLog() {
+export default function AuditLog({ isActive }) {
   const { accessToken, user } = useContext(AuthContext);
 
   const [logs, setLogs] = useState([]);
@@ -119,6 +119,8 @@ export default function AuditLog() {
   }, [search]);
 
   useEffect(() => {
+    if (!isActive) return;
+
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -151,7 +153,7 @@ export default function AuditLog() {
     });
 
     return () => { cancelled = true; };
-  }, [query, actionFilter, dateFilter, accessToken]);
+  }, [query, actionFilter, dateFilter, accessToken, isActive]);
 
   const generatePDF = async () => {
     setExporting(true);

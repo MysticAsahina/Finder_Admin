@@ -63,7 +63,7 @@ function stringToColor(str = '') {
   return { background: `hsl(${hue}, 80%, 95%)`, color: `hsl(${hue}, 70%, 40%)` };
 }
 
-export default function Drivers() {
+export default function Drivers({ isActive }) {
   const { accessToken } = useContext(AuthContext);
   const [viewMode, setViewMode] = useState('drivers'); // 'drivers' | 'flagged'
   const [modalDriver, setModalDriver] = useState(null);
@@ -107,6 +107,8 @@ export default function Drivers() {
   }, [viewMode]);
 
   useEffect(() => {
+    if (!isActive) return;
+
     if (!accessToken) {
       // Use sample drivers if not authenticated
       setDrivers(SAMPLE_DRIVERS.map(d => ({
@@ -175,7 +177,7 @@ export default function Drivers() {
       .catch(err => console.error(err));
 
     return () => { cancelled = true; };
-  }, [accessToken]);
+  }, [accessToken, isActive]);
 
   const handleSelectAction = async (account, actionType) => {
     setActiveActionMenu(null);
@@ -619,4 +621,3 @@ export default function Drivers() {
     </>
   )
 }
-

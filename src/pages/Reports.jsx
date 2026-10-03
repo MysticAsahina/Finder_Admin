@@ -5,7 +5,7 @@ import 'jspdf-autotable';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
-export default function Reports() {
+export default function Reports({ isActive }) {
   const { accessToken, user } = useContext(AuthContext);
   const [trips, setTrips] = useState([]);
   const [stats, setStats] = useState({ totalTrips: 0, completedTrips: 0, completedRate: 0, cancelledTrips: 0, registeredPassengers: 0, registeredDrivers: 0, activeDrivers: 0, inactiveDrivers: 0 });
@@ -29,7 +29,7 @@ export default function Reports() {
   const [error, setError] = useState(null);
 
   const fetchReports = async () => {
-    if (!accessToken) return;
+    if (!accessToken || !isActive) return;
     try {
       setLoading(true);
       setError(null);
@@ -58,7 +58,7 @@ export default function Reports() {
 
   useEffect(() => {
     fetchReports();
-  }, [month, year, page, accessToken]);
+  }, [month, year, page, accessToken, isActive]);
 
   const handleMonthChange = (e) => {
     setMonth(e.target.value);

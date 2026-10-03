@@ -163,7 +163,7 @@ function AppCard({ app, onApprove, onReject }) {
   )
 }
 
-export default function Applications() {
+export default function Applications({ isActive }) {
   const { accessToken } = useContext(AuthContext)
 
   function authHeaders() {
@@ -180,6 +180,8 @@ export default function Applications() {
 
   // Fetch applications
   useEffect(() => {
+    if (!isActive) return
+
     let cancelled = false
     setLoading(true)
     setError(null)
@@ -205,7 +207,7 @@ export default function Applications() {
       })
 
     return () => { cancelled = true }
-  }, [query])
+  }, [query, isActive])
 
   // Debounce search input
   useEffect(() => {
