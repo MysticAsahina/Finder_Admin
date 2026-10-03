@@ -358,6 +358,7 @@ export default function Drivers() {
               <option value="Unresponsive Passenger">Unresponsive Passenger</option>
               <option value="Unresponsive Driver">Unresponsive Driver</option>
               <option value="Policy Violation (Outside Hailing)">Policy Violation (Outside Hailing)</option>
+              <option value="Late Arrival">Late Arrival</option>
             </select>
           </div>
 
