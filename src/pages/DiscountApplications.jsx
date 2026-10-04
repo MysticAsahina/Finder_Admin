@@ -990,22 +990,28 @@ export default function DiscountApplications({ isActive }) {
               </div>
 
               {/* Photo Box */}
-              <div style={styles.modalPhotoBox}>
-                <svg
-                  viewBox="0 0 24 24"
-                  width="24"
-                  height="24"
-                  fill="none"
-                  stroke="#6B7280"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                  <circle cx="8.5" cy="8.5" r="1.5" />
-                  <polyline points="21 15 16 10 5 21" />
-                </svg>
-                <span style={styles.modalPhotoLabel}>IMAGE</span>
+              <div style={selectedApp.imageUri ? styles.modalPhotoBoxWithImage : styles.modalPhotoBox}>
+                {selectedApp.imageUri ? (
+                  <img src={selectedApp.imageUri} alt="ID Card" style={styles.modalPhotoImage} />
+                ) : (
+                  <>
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="24"
+                      height="24"
+                      fill="none"
+                      stroke="#6B7280"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <polyline points="21 15 16 10 5 21" />
+                    </svg>
+                    <span style={styles.modalPhotoLabel}>NO IMAGE</span>
+                  </>
+                )}
               </div>
 
               {/* Action Buttons */}
@@ -1435,6 +1441,21 @@ const styles = {
     justifyContent: 'center',
     gap: '10px',
     color: '#6B7280',
+  },
+  modalPhotoBoxWithImage: {
+    backgroundColor: '#FAF5F0',
+    borderRadius: '12px',
+    marginTop: '16px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  modalPhotoImage: {
+    width: '100%',
+    maxHeight: '400px',
+    objectFit: 'contain',
+    borderRadius: '12px',
   },
   modalPhotoLabel: {
     fontSize: '0.92rem',
