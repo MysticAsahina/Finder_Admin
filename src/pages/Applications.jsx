@@ -223,12 +223,19 @@ export default function Applications({ isActive }) {
       })
       const data = await res.json()
       if (res.ok) {
+        import('sweetalert2').then(({ default: Swal }) => {
+          Swal.fire('Success', 'Application successfully approved.', 'success');
+        });
         setApps(prev => prev.filter(a => a._id !== id))
       } else {
-        alert(data.message || 'Approval failed.')
+        import('sweetalert2').then(({ default: Swal }) => {
+          Swal.fire('Error', data.message || 'Approval failed.', 'error');
+        });
       }
     } catch (err) {
-      alert('Network error or server unavailable.')
+      import('sweetalert2').then(({ default: Swal }) => {
+        Swal.fire('Error', 'Network error or server unavailable.', 'error');
+      });
     }
   }
 
@@ -241,12 +248,19 @@ export default function Applications({ isActive }) {
       })
       const data = await res.json()
       if (res.ok) {
+        import('sweetalert2').then(({ default: Swal }) => {
+          Swal.fire('Success', 'Application successfully rejected.', 'success');
+        });
         setApps(prev => prev.filter(a => a._id !== id))
       } else {
-        alert(data.message || 'Rejection failed.')
+        import('sweetalert2').then(({ default: Swal }) => {
+          Swal.fire('Error', data.message || 'Rejection failed.', 'error');
+        });
       }
     } catch (err) {
-      alert('Network error or server unavailable.')
+      import('sweetalert2').then(({ default: Swal }) => {
+        Swal.fire('Error', 'Network error or server unavailable.', 'error');
+      });
     }
   }
 

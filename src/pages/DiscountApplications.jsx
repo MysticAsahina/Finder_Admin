@@ -698,6 +698,10 @@ export default function DiscountApplications({ isActive }) {
   // Actions
   const handleUpdateStatus = async (appId, newStatus, reason = '') => {
     try {
+      // If rejecting, we simulate deletion from backend or update status. 
+      // The user requested "Rejected ones are removed from the database entirely."
+      // Since it's an API, the backend should handle the deletion upon rejection, 
+      // but on the frontend we must remove it from the state.
       const res = await fetch(`${API_URL}/admin/discount-applications/${appId}`, {
         method: 'PATCH',
         headers: {
@@ -707,32 +711,34 @@ export default function DiscountApplications({ isActive }) {
         body: JSON.stringify({ status: newStatus, reason })
       });
       if (res.ok) {
-        setApplications((prev) =>
-          prev.map((app) => {
-            if (app.id === appId) {
-              return {
-                ...app,
-                status: newStatus,
-                rejectionReason: reason || (newStatus === 'Rejected' ? 'Application rejected by Admin.' : undefined),
-              };
-            }
-            return app;
-          })
-        );
-        if (selectedApp && selectedApp.id === appId) {
-          setSelectedApp((prev) => ({
-            ...prev,
-            status: newStatus,
-            rejectionReason: reason || (newStatus === 'Rejected' ? 'Application rejected by Admin.' : undefined),
-          }));
+        import('sweetalert2').then(({ default: Swal }) => {
+          Swal.fire('Success', `Application successfully ${newStatus.toLowerCase()}.`, 'success');
+        });
+        
+        if (newStatus === 'Rejected') {
+           setApplications((prev) => prev.filter((app) => app.id !== appId));
+        } else {
+           setApplications((prev) =>
+             prev.map((app) => {
+               if (app.id === appId) {
+                 return { ...app, status: newStatus };
+               }
+               return app;
+             })
+           );
         }
+        setSelectedApp(null); // Close the modal
       } else {
         const errData = await res.json();
-        alert(errData.message || 'Failed to update application status.');
+        import('sweetalert2').then(({ default: Swal }) => {
+          Swal.fire('Error', errData.message || 'Failed to update application status.', 'error');
+        });
       }
     } catch (e) {
       console.error(e);
-      alert('Network error while updating status.');
+      import('sweetalert2').then(({ default: Swal }) => {
+        Swal.fire('Error', 'Network error while updating status.', 'error');
+      });
     }
   };
 
@@ -766,10 +772,9 @@ export default function DiscountApplications({ isActive }) {
         {/* Filter Tabs matching exact screenshot */}
         <div style={styles.filterPillGroup}>
           {[
-            { key: 'All', label: 'All', count: counts.total },
+            { key: 'All', label: 'All', count: counts.total - counts.rejected },
             { key: 'Pending', label: 'Pending', count: counts.pending },
             { key: 'Approved', label: 'Approved', count: counts.approved },
-            { key: 'Rejected', label: 'Rejected', count: counts.rejected },
           ].map((tab) => {
             const isFilterActive = activeFilter === tab.key;
             return (
@@ -1016,24 +1021,38 @@ export default function DiscountApplications({ isActive }) {
 
               {/* Action Buttons */}
               <div style={styles.modalActionRow}>
-                <button
-                  style={styles.modalApproveBtn}
-                  onClick={() => {
-                    handleUpdateStatus(selectedApp.id, 'Approved');
-                    setSelectedApp(null);
-                  }}
-                >
-                  Approve Application
-                </button>
-                <button
-                  style={styles.modalRejectBtn}
-                  onClick={() => {
-                    handleUpdateStatus(selectedApp.id, 'Rejected');
-                    setSelectedApp(null);
-                  }}
-                >
-                  Reject
-                </button>
+                {selectedApp.status === 'Approved' ? (
+                  <button
+                    style={styles.modalRejectBtn}
+                    onClick={() => {
+                      handleUpdateStatus(selectedApp.id, 'Rejected');
+                      setSelectedApp(null);
+                    }}
+                  >
+                    Invalidate Discount
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      style={styles.modalApproveBtn}
+                      onClick={() => {
+                        handleUpdateStatus(selectedApp.id, 'Approved');
+                        setSelectedApp(null);
+                      }}
+                    >
+                      Approve Application
+                    </button>
+                    <button
+                      style={styles.modalRejectBtn}
+                      onClick={() => {
+                        handleUpdateStatus(selectedApp.id, 'Rejected');
+                        setSelectedApp(null);
+                      }}
+                    >
+                      Reject
+                    </button>
+                  </>
+                )}
               </div>
 
             </div>

@@ -236,15 +236,23 @@ export default function Drivers({ isActive }) {
       if (actionType === 'Clear Flag') {
         setFlaggedAccounts(prev => prev.filter(a => a.id !== account.id));
         Swal.fire({ title: 'Flag Cleared', text: `Flag for ${account.name} has been removed.`, icon: 'success', timer: 1800, showConfirmButton: false });
-      } else if (actionType === 'Temporary Suspension') {
-        setFlaggedAccounts(prev => prev.map(a => a.id === account.id ? { ...a, actionBadge: 'Temp Suspended', status: 'Suspended' } : a));
-        Swal.fire({ title: 'Temporarily Suspended', text: `${account.name} has been suspended for ${payload.durationDays} days.`, icon: 'warning', timer: 2000, showConfirmButton: false });
-      } else if (actionType === 'Suspend Until Resolved') {
-        setFlaggedAccounts(prev => prev.map(a => a.id === account.id ? { ...a, actionBadge: 'Suspended (Resolved)', status: 'Suspended' } : a));
-        Swal.fire({ title: 'Suspended Until Resolved', text: `${account.name} has been suspended indefinitely until resolved.`, icon: 'warning', timer: 2000, showConfirmButton: false });
-      } else if (actionType === 'Permanent Suspension') {
-        setFlaggedAccounts(prev => prev.map(a => a.id === account.id ? { ...a, actionBadge: 'Perm Suspended', status: 'Suspended' } : a));
-        Swal.fire({ title: 'Permanently Suspended', text: `${account.name} has been permanently banned.`, icon: 'error', timer: 2000, showConfirmButton: false });
+      } else {
+        setFlaggedAccounts(prev => prev.filter(a => a.id !== account.id));
+        setSuspendedAccounts(prev => [{
+          id: account.id,
+          name: account.name,
+          role: account.role,
+          suspensionType: actionType,
+          suspensionEndDate: actionType === 'Temporary Suspension' && payload.durationDays ? new Date(Date.now() + payload.durationDays * 86400000).toISOString() : null
+        }, ...prev]);
+
+        if (actionType === 'Temporary Suspension') {
+          Swal.fire({ title: 'Temporarily Suspended', text: `${account.name} has been suspended for ${payload.durationDays} days.`, icon: 'warning', timer: 2000, showConfirmButton: false });
+        } else if (actionType === 'Suspend Until Resolved') {
+          Swal.fire({ title: 'Suspended Until Resolved', text: `${account.name} has been suspended indefinitely until resolved.`, icon: 'warning', timer: 2000, showConfirmButton: false });
+        } else if (actionType === 'Permanent Suspension') {
+          Swal.fire({ title: 'Permanently Suspended', text: `${account.name} has been permanently banned.`, icon: 'error', timer: 2000, showConfirmButton: false });
+        }
       }
     } catch (e) {
       console.error(e);
