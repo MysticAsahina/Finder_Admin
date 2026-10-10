@@ -187,34 +187,72 @@ export default function Drivers({ isActive }) {
     if (actionType === 'Clear Flag') {
       backendAction = 'clear';
     } else if (actionType === 'Temporary Suspension') {
-      const { value: days, isConfirmed } = await Swal.fire({
+      const { value: formValues, isConfirmed } = await Swal.fire({
         title: 'Temporary Suspension',
-        text: 'Enter suspension duration (min 3 days, max 30 days):',
-        input: 'number',
-        inputAttributes: { min: 3, max: 30, step: 1 },
+        html: `
+          <p style="margin-bottom: 10px; font-size: 14px; color: #555; text-align: left;">Enter suspension duration (min 3, max 30 days):</p>
+          <input id="swal-input1" type="number" min="3" max="30" class="swal2-input" placeholder="Duration (days)" style="margin-bottom: 15px;">
+          <p style="margin-bottom: 10px; font-size: 14px; color: #555; text-align: left;">Reason for suspension:</p>
+          <textarea id="swal-input2" class="swal2-textarea" placeholder="Enter reason here..." rows="3"></textarea>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        preConfirm: () => {
+          const days = document.getElementById('swal-input1').value;
+          const reason = document.getElementById('swal-input2').value;
+          if (!days || days < 3 || days > 30) {
+            Swal.showValidationMessage('Please enter a valid number between 3 and 30');
+            return false;
+          }
+          if (!reason.trim()) {
+            Swal.showValidationMessage('Please enter a reason');
+            return false;
+          }
+          return { days, reason: reason.trim() };
+        }
+      });
+      if (!isConfirmed || !formValues) return;
+      backendAction = 'temp_suspend';
+      payload = { durationDays: parseInt(formValues.days), reason: formValues.reason };
+    } else if (actionType === 'Suspend Until Resolved') {
+      const { value: reason, isConfirmed } = await Swal.fire({
+        title: 'Suspend Until Resolved',
+        text: 'Enter reason for suspension:',
+        input: 'textarea',
+        inputPlaceholder: 'Enter reason here...',
         showCancelButton: true,
         inputValidator: (value) => {
-          if (!value || value < 3 || value > 30) {
-            return 'Please enter a valid number between 3 and 30';
+          if (!value || !value.trim()) {
+            return 'Please enter a reason';
           }
         }
       });
-      if (!isConfirmed || !days) return;
-      backendAction = 'temp_suspend';
-      payload = { durationDays: parseInt(days) };
-    } else if (actionType === 'Suspend Until Resolved') {
+      if (!isConfirmed || !reason) return;
       backendAction = 'suspend_resolved';
+      payload = { reason: reason.trim() };
     } else if (actionType === 'Permanent Suspension') {
-      const { isConfirmed } = await Swal.fire({
+      const { value: reason, isConfirmed } = await Swal.fire({
         title: 'Permanent Suspension',
-        text: `Are you sure you want to permanently suspend ${account.name}? This action is unappealable.`,
+        html: `
+          <p style="margin-bottom: 15px; color: #555;">Are you sure you want to permanently suspend ${account.name}? This action is unappealable.</p>
+          <textarea id="swal-input-reason" class="swal2-textarea" placeholder="Enter reason for permanent suspension..." rows="3"></textarea>
+        `,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
-        confirmButtonText: 'Yes, permanently suspend'
+        confirmButtonText: 'Yes, permanently suspend',
+        preConfirm: () => {
+          const r = document.getElementById('swal-input-reason').value;
+          if (!r.trim()) {
+            Swal.showValidationMessage('Please enter a reason');
+            return false;
+          }
+          return r.trim();
+        }
       });
-      if (!isConfirmed) return;
+      if (!isConfirmed || !reason) return;
       backendAction = 'perm_suspend';
+      payload = { reason: reason };
     }
 
     if (!backendAction) return;
@@ -243,7 +281,8 @@ export default function Drivers({ isActive }) {
           name: account.name,
           role: account.role,
           suspensionType: actionType,
-          suspensionEndDate: actionType === 'Temporary Suspension' && payload.durationDays ? new Date(Date.now() + payload.durationDays * 86400000).toISOString() : null
+          suspensionEndDate: actionType === 'Temporary Suspension' && payload.durationDays ? new Date(Date.now() + payload.durationDays * 86400000).toISOString() : null,
+          reason: payload.reason || "N/A"
         }, ...prev]);
 
         if (actionType === 'Temporary Suspension') {
@@ -504,10 +543,11 @@ export default function Drivers({ isActive }) {
             <table className="flagged-table">
               <thead>
                 <tr>
-                  <th style={{ width: '25%' }}>NAME</th>
-                  <th style={{ width: '20%' }}>ROLE</th>
-                  <th style={{ width: '30%' }}>SUSPENSION TYPE</th>
-                  <th style={{ width: '25%', textAlign: 'right', paddingRight: '20px' }}>LIFT ACTION</th>
+                  <th style={{ width: '20%' }}>NAME</th>
+                  <th style={{ width: '15%' }}>ROLE</th>
+                  <th style={{ width: '20%' }}>SUSPENSION TYPE</th>
+                  <th style={{ width: '25%' }}>REASON</th>
+                  <th style={{ width: '20%', textAlign: 'right', paddingRight: '20px' }}>LIFT ACTION</th>
                 </tr>
               </thead>
               <tbody>
@@ -520,6 +560,7 @@ export default function Drivers({ isActive }) {
                         {account.suspensionType || 'Suspended'}
                       </span>
                     </td>
+                    <td>{account.reason || 'N/A'}</td>
                     <td style={{ textAlign: 'right', paddingRight: '20px' }}>
                       {account.suspensionType !== 'Permanent Suspension' && (
                         <button 
@@ -534,7 +575,7 @@ export default function Drivers({ isActive }) {
                 ))}
                 {Array.from({ length: emptySuspendedRowCount }).map((_, idx) => (
                   <tr key={`empty-suspended-row-${idx}`} className="empty-row">
-                    <td colSpan={4}>&nbsp;</td>
+                    <td colSpan={5}>&nbsp;</td>
                   </tr>
                 ))}
               </tbody>
