@@ -242,9 +242,9 @@ export default function App() {
         />
         <div className="main">
           <Topbar activePage={activePage} />
-          <div className="content">
+          <div className={`content${activePage === 'userAppeals' ? ' appeals-view no-scroll' : ''}`}>
             {Object.entries(PAGE_MAP).map(([key, PageComponent]) => (
-              <div key={key} className={`page${activePage === key ? ' active' : ''}`}>
+              <div key={key} className={`page${activePage === key ? ' active' : ''}${key === 'userAppeals' ? ' appeals-page-container' : ''}`}>
                 <PageComponent isActive={activePage === key} />
               </div>
             ))}

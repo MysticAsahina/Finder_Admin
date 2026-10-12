@@ -439,7 +439,7 @@ export default function UserAppeals({ isActive }) {
         <div className="appeals-header-info">
           <h2 className="appeals-title">User Suspension Appeals</h2>
           <p className="appeals-desc">
-            Review user-submitted appeals for suspended drivers and passengers. Decide whether to lift suspensions or permanently disable accounts.
+            Review driver and passenger suspension appeals to lift suspensions or permanently disable accounts.
           </p>
         </div>
 
