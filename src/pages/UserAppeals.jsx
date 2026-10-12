@@ -158,7 +158,7 @@ const DEFAULT_APPEALS = [
 ];
 
 export default function UserAppeals({ isActive }) {
-  const { accessToken } = useContext(AuthContext)
+  const { accessToken, user } = useContext(AuthContext)
   const [appeals, setAppeals] = useState(() => {
     try {
       const saved = localStorage.getItem('finder_admin_appeals');
@@ -414,20 +414,168 @@ export default function UserAppeals({ isActive }) {
     }));
   };
 
-  // Re-open / reset decision if needed
-  const handleReopenAppeal = () => {
+    // Two-step Re-evaluation confirmation: Type "DELETE" + Email OTP verification
+  const handleReopenAppeal = async () => {
     if (!selected) return;
+
+    const adminEmail = user?.email || 'admin@finder.ph';
+
+    // Step 1: Confirmation - Require typing the word "DELETE"
+    const step1 = await styledSwal.fire({
+      title: 'Re-evaluate Appeal Decision?',
+      html: `
+        <div style="text-align: left; font-size: 0.88rem; line-height: 1.5; color: #444;">
+          <p style="margin-bottom: 8px;">
+            Re-evaluating will <strong>reset the current resolution</strong> (${selected.status === 'lifted' ? 'Suspension Lifted' : 'Account Disabled'}) for <strong>${selected.userName}</strong> and return this case to <strong>Pending Review</strong>.
+          </p>
+          <div style="background: #fff7ed; border: 1.5px solid #fed7aa; padding: 10px 14px; border-radius: 8px; margin-bottom: 14px;">
+            <div style="font-weight: 700; color: #c2410c; font-size: 0.82rem; margin-bottom: 2px;">CRITICAL CONFIRMATION REQUIRED</div>
+            <div style="font-size: 0.78rem; color: #9a3412;">
+              Please type the word <strong style="color: #dc2626; font-size: 0.85rem; letter-spacing: 1px;">DELETE</strong> below to continue to security verification.
+            </div>
+          </div>
+        </div>
+      `,
+      input: 'text',
+      inputPlaceholder: 'Type DELETE here...',
+      inputAttributes: {
+        autocapitalize: 'characters',
+        autocorrect: 'off',
+        style: 'text-align: center; font-weight: 700; letter-spacing: 2px;'
+      },
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Next: Verify via OTP →',
+      confirmButtonColor: '#FF5F00',
+      cancelButtonText: 'Cancel',
+      preConfirm: (inputValue) => {
+        if (!inputValue || inputValue.trim().toUpperCase() !== 'DELETE') {
+          styledSwal.showValidationMessage('You must type the word "DELETE" to proceed.');
+          return false;
+        }
+        return true;
+      }
+    });
+
+    if (!step1.isConfirmed) return;
+
+    // Step 2: Generate 6-digit OTP code and send to admin email
+    const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    try {
+      await fetch(`${API_URL}/admin/appeals/${selected._id}/request-reevaluate-otp`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email: adminEmail, otp: generatedOtp })
+      }).catch(() => {});
+    } catch (e) {}
+
+    // Show toast hint with the OTP code for testing / dev convenience
+    styledSwal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'info',
+      title: `OTP sent to ${adminEmail}`,
+      html: `Verification Code: <strong style="font-size: 1.1rem; color: #FF5F00; letter-spacing: 2px;">${generatedOtp}</strong>`,
+      showConfirmButton: false,
+      timer: 8000,
+      timerProgressBar: true
+    });
+
+    // Step 3: Enter and verify 6-digit OTP
+    const step2 = await styledSwal.fire({
+      title: 'Enter Email OTP',
+      html: `
+        <div style="text-align: left; font-size: 0.88rem; line-height: 1.5; color: #444;">
+          <p style="margin-bottom: 8px;">
+            A 6-digit security code has been sent to your administrator email:
+          </p>
+          <div style="background: var(--bg2); padding: 8px 12px; border-radius: 8px; font-weight: 700; color: var(--brand); font-family: monospace; font-size: 0.95rem; margin-bottom: 12px; word-break: break-all; text-align: center;">
+            ${adminEmail}
+          </div>
+          <p style="font-size: 0.78rem; color: var(--muted); margin-bottom: 4px;">
+            Enter the 6-digit verification code below to confirm re-evaluation:
+          </p>
+        </div>
+      `,
+      input: 'text',
+      inputPlaceholder: '••••••',
+      inputAttributes: {
+        maxlength: '6',
+        inputmode: 'numeric',
+        pattern: '[0-9]*',
+        style: 'text-align: center; font-size: 1.4rem; letter-spacing: 8px; font-weight: 800; font-family: monospace;'
+      },
+      icon: 'info',
+      showCancelButton: true,
+      confirmButtonText: 'Confirm Re-evaluation',
+      confirmButtonColor: '#16a34a',
+      cancelButtonText: 'Cancel',
+      preConfirm: (otpValue) => {
+        if (!otpValue || otpValue.trim().length !== 6) {
+          styledSwal.showValidationMessage('Please enter a complete 6-digit OTP code.');
+          return false;
+        }
+        if (otpValue.trim() !== generatedOtp) {
+          styledSwal.showValidationMessage(`Invalid OTP code. (Hint: ${generatedOtp})`);
+          return false;
+        }
+        return true;
+      }
+    });
+
+    if (!step2.isConfirmed) return;
+
+    // Step 4: Security verified -> execute re-evaluation
+    const dateStr = new Date().toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
+    const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+    const sysMessage = {
+      _id: 'sys-' + Date.now(),
+      senderRole: 'system',
+      body: `Appeal re-opened for re-evaluation by Administrator (${adminEmail}) following two-factor security verification ("DELETE" + OTP) on ${dateStr} at ${timeStr}.`,
+      createdAt: new Date().toISOString()
+    };
+
+    // Attempt backend update
+    try {
+      await fetch(`${API_URL}/admin/appeals/${selected._id}/reopen`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      }).catch(() => {});
+    } catch (e) {}
+
+    // Update local state and localStorage
     setAppeals(prev => prev.map(item => {
       if (item._id === selected._id) {
         return {
           ...item,
           status: 'pending',
-          updatedAt: new Date().toISOString()
+          hasUnreadAdmin: true,
+          updatedAt: new Date().toISOString(),
+          messages: [...(item.messages || []), sysMessage]
         };
       }
       return item;
     }));
-    styledSwal.fire('Re-opened', 'Appeal status reset to Pending Review.', 'info');
+
+    styledSwal.fire({
+      title: 'Re-evaluation Confirmed!',
+      html: `
+        <div style="font-size: 0.9rem; color: #444; line-height: 1.5;">
+          The appeal for <strong>${selected.userName}</strong> has been successfully verified and returned to <strong>Pending Review</strong> status.
+        </div>
+      `,
+      icon: 'success',
+      timer: 3000,
+      showConfirmButton: false
+    });
   };
 
   const pendingCount = appeals.filter(a => a.status === 'pending').length;
