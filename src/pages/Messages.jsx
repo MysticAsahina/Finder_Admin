@@ -101,9 +101,9 @@ export default function Messages({ role = "passenger", isActive }) {
       setSelected(prev => prev ? { ...prev, status: 'resolved' } : prev)
     })
 
-      socketRef.current = socket
-      return () => socket.disconnect()
-    }, [accessToken, role])
+    socketRef.current = socket
+    return () => socket.disconnect()
+  }, [accessToken, role, selected?._id])
 
   // Reload the ticket list with live auto-refresh while on this tab
   useEffect(() => {
@@ -142,6 +142,9 @@ export default function Messages({ role = "passenger", isActive }) {
         const data = await res.json()
         if (data.messages) {
           setMessages(data.messages)
+        }
+        if (data.ticket) {
+          setSelected(prev => ({ ...prev, ...data.ticket }))
         }
         
         // Update local ticket list to remove unread badge since we just fetched it
@@ -350,7 +353,8 @@ export default function Messages({ role = "passenger", isActive }) {
     const q = searchQuery.toLowerCase()
     const name = getTicketName(t).toLowerCase()
     const subject = (t.subject || '').toLowerCase()
-    return name.includes(q) || subject.includes(q)
+    const rideRef = t.rideId ? (t.rideId._id || t.rideId).toString().toLowerCase() : ''
+    return name.includes(q) || subject.includes(q) || rideRef.includes(q)
   })
 
   return (
@@ -379,8 +383,13 @@ export default function Messages({ role = "passenger", isActive }) {
                 })}
               </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
               <div className="msg-preview">{t.subject}</div>
+              {t.rideId && (
+                <span style={{ fontSize: '10px', backgroundColor: 'var(--brand-l)', color: 'var(--brand)', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
+                  Trip #{((t.rideId._id || t.rideId).toString()).slice(-6).toUpperCase()}
+                </span>
+              )}
               {t.status === 'resolved' && (
                 <span style={{ fontSize: '10px', backgroundColor: 'var(--border-l)', color: 'var(--text-light)', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', textTransform: 'uppercase' }}>Resolved</span>
               )}
@@ -413,13 +422,78 @@ export default function Messages({ role = "passenger", isActive }) {
           )}
         </div>
 
+        {/* Linked Trip Summary Card if ticket is related to a ride */}
+        {selected?.rideId && typeof selected.rideId === 'object' && (
+          <div style={{
+            margin: '12px 20px 0',
+            padding: '12px 16px',
+            backgroundColor: 'var(--brand-ll)',
+            border: '1.5px solid var(--border)',
+            borderRadius: '12px',
+            fontSize: '0.82rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700', color: 'var(--text)' }}>
+                <span style={{ backgroundColor: 'var(--brand)', color: 'white', padding: '2px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '800' }}>
+                  TRIP #{((selected.rideId._id || selected.rideId).toString()).slice(-6).toUpperCase()}
+                </span>
+                <span style={{ color: 'var(--muted)', fontSize: '0.75rem' }}>
+                  {new Date(selected.rideId.tripCompletedAt || selected.rideId.createdAt).toLocaleString('en-US', {
+                    month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true
+                  })}
+                </span>
+              </div>
+              <span className={`badge ${selected.rideId.status === 'completed' ? 'green' : 'red'}`} style={{ textTransform: 'uppercase', fontSize: '0.7rem' }}>
+                {selected.rideId.status || 'TRIP'}
+              </span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', backgroundColor: 'rgba(255,255,255,0.7)', padding: '8px 12px', borderRadius: '8px' }}>
+              <div>
+                <div style={{ color: 'var(--subtle)', fontSize: '0.7rem', fontWeight: '600', textTransform: 'uppercase' }}>PICKUP</div>
+                <div style={{ color: 'var(--text)', fontWeight: '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={selected.rideId.pickup?.address}>
+                  {selected.rideId.pickup?.address || 'N/A'}
+                </div>
+              </div>
+              <div>
+                <div style={{ color: 'var(--subtle)', fontSize: '0.7rem', fontWeight: '600', textTransform: 'uppercase' }}>DROPOFF</div>
+                <div style={{ color: 'var(--text)', fontWeight: '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={selected.rideId.dropoff?.address}>
+                  {selected.rideId.dropoff?.address || 'N/A'}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: 'var(--muted)', flexWrap: 'wrap', gap: '8px' }}>
+              <div>
+                <strong>Fare:</strong> ₱{Number(selected.rideId.fare || 0).toFixed(2)} ({selected.rideId.paymentMethod?.toUpperCase() || 'CASH'})
+              </div>
+              <div>
+                <strong>Distance:</strong> {selected.rideId.distanceKm ? `${selected.rideId.distanceKm.toFixed(1)} km` : '–'} · <strong>Duration:</strong> {selected.rideId.actualDurationMins || selected.rideId.durationMins || '–'} mins
+              </div>
+              <div>
+                <strong>{selected.userRole === 'passenger' ? 'Driver:' : 'Passenger:'}</strong> {selected.userRole === 'passenger' 
+                  ? (selected.rideId.driverId ? `${selected.rideId.driverId.firstName || ''} ${selected.rideId.driverId.lastName || ''} (${selected.rideId.driverId.mobileNumber || ''})` : 'Unassigned')
+                  : (selected.rideId.passengerId ? `${selected.rideId.passengerId.firstName || ''} ${selected.rideId.passengerId.lastName || ''} (${selected.rideId.passengerId.mobileNumber || ''})` : 'Unassigned')}
+              </div>
+            </div>
+            {selected.rideId.cancellationData?.reason && (
+              <div style={{ fontSize: '0.75rem', color: 'var(--red)', fontStyle: 'italic' }}>
+                Cancellation Reason: {selected.rideId.cancellationData.reason}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="msg-body" ref={bodyRef}>
           {messages.map(msg => (
             <div
               key={msg._id}
               className={`msg-wrapper ${msg.senderRole === 'admin' ? 'out' : 'in'}`}
             >
-              <div className={`bubble ${msg.senderRole === 'admin' ? 'out' : 'in'}`}>
+              <div className={`bubble ${msg.senderRole === 'admin' ? 'out' : 'in'}`} style={{ whiteSpace: 'pre-wrap' }}>
                 {msg.body && <div style={{ marginBottom: msg.mediaUrl ? 6 : 0 }}>{msg.body}</div>}
                 {msg.mediaUrl && msg.mediaType === 'image' && (
                   <img src={msg.mediaUrl} onClick={() => setPreviewImage(msg.mediaUrl)} alt="attachment" />
