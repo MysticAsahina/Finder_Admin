@@ -122,37 +122,48 @@ export default function AuditLog({ isActive }) {
     if (!isActive) return;
 
     let cancelled = false;
-    setLoading(true);
-    setError(null);
 
-    const params = new URLSearchParams();
-    if (query) params.set('search', query);
-    if (actionFilter !== 'All Actions') params.set('action', actionFilter);
-    if (dateFilter !== 'All Time') params.set('date', dateFilter);
-    
-    fetch(`${API_URL}/admin/audit-logs?${params}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
+    const loadLogs = (isInitial = false) => {
+      if (isInitial) {
+        setLoading(true);
+        setError(null);
       }
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (cancelled) return;
-      if (data.logs) {
-        setLogs(data.logs);
-      } else {
-        setError(data.message || 'Failed to fetch logs');
-      }
-    })
-    .catch(err => {
-      if (!cancelled) setError('Network error');
-    })
-    .finally(() => {
-      if (!cancelled) setLoading(false);
-    });
 
-    return () => { cancelled = true; };
+      const params = new URLSearchParams();
+      if (query) params.set('search', query);
+      if (actionFilter !== 'All Actions') params.set('action', actionFilter);
+      if (dateFilter !== 'All Time') params.set('date', dateFilter);
+      
+      fetch(`${API_URL}/admin/audit-logs?${params}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        }
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (cancelled) return;
+        if (data.logs) {
+          setLogs(data.logs);
+        } else if (isInitial) {
+          setError(data.message || 'Failed to fetch logs');
+        }
+      })
+      .catch(err => {
+        if (!cancelled && isInitial) setError('Network error');
+      })
+      .finally(() => {
+        if (!cancelled && isInitial) setLoading(false);
+      });
+    };
+
+    loadLogs(true);
+    const interval = setInterval(() => loadLogs(false), 3500);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [query, actionFilter, dateFilter, accessToken, isActive]);
 
   const generatePDF = async () => {

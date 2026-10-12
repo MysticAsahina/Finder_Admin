@@ -28,11 +28,13 @@ export default function Reports({ isActive }) {
 
   const [error, setError] = useState(null);
 
-  const fetchReports = async () => {
+  const fetchReports = async (showLoading = true) => {
     if (!accessToken || !isActive) return;
     try {
-      setLoading(true);
-      setError(null);
+      if (showLoading) {
+        setLoading(true);
+        setError(null);
+      }
       const res = await fetch(`${API_URL}/admin/reports?month=${month}&year=${year}&page=${page}&limit=10`, {
         method: 'GET',
         headers: {
@@ -45,19 +47,24 @@ export default function Reports({ isActive }) {
         setTrips(data.trips);
         setStats(data.stats);
         setTotalPages(data.pagination.totalPages || 1);
-      } else {
+      } else if (showLoading) {
         setError(data.message || 'Failed to fetch reports');
       }
     } catch (err) {
       console.error("Error fetching reports:", err);
-      setError('Network error or server unavailable');
+      if (showLoading) setError('Network error or server unavailable');
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchReports();
+    if (!accessToken || !isActive) return;
+    fetchReports(true);
+    const interval = setInterval(() => {
+      fetchReports(false);
+    }, 4000);
+    return () => clearInterval(interval);
   }, [month, year, page, accessToken, isActive]);
 
   const handleMonthChange = (e) => {

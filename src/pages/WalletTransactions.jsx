@@ -3,7 +3,7 @@ import { AuthContext } from '../context/AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
-export default function WalletTransactions() {
+export default function WalletTransactions({ isActive }) {
   const { accessToken } = useContext(AuthContext);
   const [summary, setSummary] = useState({
     totalPassengerFloat: 0,
@@ -16,10 +16,10 @@ export default function WalletTransactions() {
   const [filterType, setFilterType] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (showLoading = true) => {
     if (!accessToken) return;
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const [sumRes, txRes] = await Promise.all([
         fetch(`${API_URL}/admin/wallet/summary`, {
           headers: { Authorization: `Bearer ${accessToken}` },
@@ -41,13 +41,18 @@ export default function WalletTransactions() {
     } catch (err) {
       console.error('Failed to fetch admin wallet data', err);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }, [accessToken, filterType]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (!isActive) return;
+    fetchData(true);
+    const interval = setInterval(() => {
+      fetchData(false);
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [isActive, fetchData]);
 
   const formatCurrency = (val) =>
     (val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

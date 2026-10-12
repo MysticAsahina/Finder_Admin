@@ -178,35 +178,46 @@ export default function Applications({ isActive }) {
   const [search,  setSearch]  = useState('')
   const [query,   setQuery]   = useState('')  // debounced search term
 
-  // Fetch applications
+  // Fetch applications (live auto-updates via useEffect)
   useEffect(() => {
     if (!isActive) return
 
     let cancelled = false
-    setLoading(true)
-    setError(null)
 
-    const params = new URLSearchParams({ status: 'pending' })
-    if (query) params.set('search', query)
+    const loadApps = (isInitial = false) => {
+      if (isInitial) {
+        setLoading(true)
+        setError(null)
+      }
 
-    fetch(`${API_URL}/admin/applications?${params}`, { headers: authHeaders() })
-      .then(r => r.json())
-      .then(data => {
-        if (cancelled) return
-        if (data.applications) {
-          setApps(data.applications)
-        } else {
-          setError(data.message || 'Failed to load applications.')
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setError('Unable to reach the server.')
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+      const params = new URLSearchParams({ status: 'pending' })
+      if (query) params.set('search', query)
 
-    return () => { cancelled = true }
+      fetch(`${API_URL}/admin/applications?${params}`, { headers: authHeaders() })
+        .then(r => r.json())
+        .then(data => {
+          if (cancelled) return
+          if (data.applications) {
+            setApps(data.applications)
+          } else if (isInitial) {
+            setError(data.message || 'Failed to load applications.')
+          }
+        })
+        .catch(() => {
+          if (!cancelled && isInitial) setError('Unable to reach the server.')
+        })
+        .finally(() => {
+          if (!cancelled && isInitial) setLoading(false)
+        })
+    }
+
+    loadApps(true)
+    const interval = setInterval(() => loadApps(false), 3000)
+
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
   }, [query, isActive])
 
   // Debounce search input
