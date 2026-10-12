@@ -458,7 +458,7 @@ export default function WalletTransactions({ isActive }) {
           </div>
         </div>
 
-        <div className="wallet-table-scroll">
+        <div className="wallet-table-container wallet-table-scroll">
           <table className="wallet-table">
             <thead>
               <tr>

@@ -1596,15 +1596,25 @@ tbody tr:hover{background:var(--brand-ll);}
 }
 
 /* Toolbar & Filter Bar */
+/* Ensure wallet page has smooth scrolling and no parent transform blocking sticky */
+.page:has(.wallet-page) {
+  animation: none !important;
+  transform: none !important;
+}
+
 .wallet-toolbar-card {
+  position: sticky;
+  top: 0;
+  z-index: 25;
   background: var(--white);
   border-radius: var(--radius);
   padding: 16px 20px;
   border: 1.5px solid var(--border-l);
-  box-shadow: var(--shadow);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
   gap: 14px;
+  transition: box-shadow 0.2s ease;
 }
 
 .wallet-toolbar-row {
@@ -1758,9 +1768,38 @@ tbody tr:hover{background:var(--brand-ll);}
   font-weight: 600;
 }
 
+.wallet-table-container,
 .wallet-table-scroll {
   overflow-x: auto;
+  overflow-y: auto;
   width: 100%;
+  height: 480px;
+  max-height: 480px;
+  position: relative;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.wallet-table-scroll::-webkit-scrollbar,
+.wallet-table-container::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.wallet-table-scroll::-webkit-scrollbar-track,
+.wallet-table-container::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+.wallet-table-scroll::-webkit-scrollbar-thumb,
+.wallet-table-container::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.wallet-table-scroll::-webkit-scrollbar-thumb:hover,
+.wallet-table-container::-webkit-scrollbar-thumb:hover {
+  background: var(--subtle);
 }
 
 .wallet-table {
@@ -1770,14 +1809,18 @@ tbody tr:hover{background:var(--brand-ll);}
 }
 
 .wallet-table th {
-  padding: 12px 18px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
   background: var(--bg);
+  padding: 12px 18px;
   border-bottom: 1.5px solid var(--border-l);
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--muted);
+  box-shadow: 0 1px 0 var(--border-l);
 }
 
 .wallet-table td {
