@@ -15,6 +15,22 @@ const styledSwal = Swal.mixin({
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
+const isVideoMedia = (url, mediaType) => {
+  if (mediaType === 'video') return true;
+  if (!url || typeof url !== 'string') return false;
+  const cleanUrl = url.split('?')[0].toLowerCase();
+  return (
+    cleanUrl.includes('/video/upload/') ||
+    cleanUrl.endsWith('.mp4') ||
+    cleanUrl.endsWith('.mov') ||
+    cleanUrl.endsWith('.webm') ||
+    cleanUrl.endsWith('.m4v') ||
+    cleanUrl.endsWith('.ogv') ||
+    cleanUrl.endsWith('.avi') ||
+    cleanUrl.endsWith('.mkv')
+  );
+};
+
 // Default sample appeals for immediate interactive preview
 const DEFAULT_APPEALS = [
   {
@@ -821,13 +837,29 @@ export default function UserAppeals({ isActive }) {
                   {selected.proofMedia && (
                     <div className="appeal-proof-section">
                       <span className="info-label">Uploaded Proof / Evidence:</span>
-                      <div className="appeal-proof-thumb" onClick={() => setPreviewImage(selected.proofMedia)}>
-                        <img src={selected.proofMedia} alt="Evidence" />
-                        <div className="appeal-proof-overlay">
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-                          <span>Click to View Full Evidence</span>
+                      {isVideoMedia(selected.proofMedia) ? (
+                        <div style={{ marginTop: '8px' }}>
+                          <video
+                            src={selected.proofMedia}
+                            controls
+                            style={{
+                              maxWidth: '100%',
+                              maxHeight: '280px',
+                              borderRadius: '8px',
+                              backgroundColor: '#000',
+                              display: 'block'
+                            }}
+                          />
                         </div>
-                      </div>
+                      ) : (
+                        <div className="appeal-proof-thumb" onClick={() => setPreviewImage(selected.proofMedia)}>
+                          <img src={selected.proofMedia} alt="Evidence" />
+                          <div className="appeal-proof-overlay">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                            <span>Click to View Full Evidence</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -861,12 +893,28 @@ export default function UserAppeals({ isActive }) {
                         )}
                         <div>{msg.body}</div>
                         {msg.mediaUrl && (
-                          <img
-                            src={msg.mediaUrl}
-                            alt="Attachment"
-                            style={{ marginTop: '8px', borderRadius: '8px', maxWidth: '240px', cursor: 'pointer' }}
-                            onClick={() => setPreviewImage(msg.mediaUrl)}
-                          />
+                          isVideoMedia(msg.mediaUrl, msg.mediaType) ? (
+                            <div style={{ marginTop: '8px' }}>
+                              <video
+                                src={msg.mediaUrl}
+                                controls
+                                style={{
+                                  maxWidth: '280px',
+                                  maxHeight: '220px',
+                                  borderRadius: '8px',
+                                  display: 'block',
+                                  backgroundColor: '#000'
+                                }}
+                              />
+                            </div>
+                          ) : (
+                            <img
+                              src={msg.mediaUrl}
+                              alt="Attachment"
+                              style={{ marginTop: '8px', borderRadius: '8px', maxWidth: '240px', cursor: 'pointer' }}
+                              onClick={() => setPreviewImage(msg.mediaUrl)}
+                            />
+                          )
                         )}
                       </div>
                       <div className={`bubble-time ${isAdmin ? 'out-time' : ''}`}>
@@ -918,11 +966,20 @@ export default function UserAppeals({ isActive }) {
         </div>
       </div>
 
-      {/* Full-size Image Preview Modal */}
+      {/* Full-size Media Preview Modal */}
       {previewImage && (
         <div className="media-preview-overlay" onClick={() => setPreviewImage(null)}>
           <div className="media-preview-content" onClick={e => e.stopPropagation()}>
-            <img src={previewImage} alt="Full evidence preview" />
+            {isVideoMedia(previewImage) ? (
+              <video
+                src={previewImage}
+                controls
+                autoPlay
+                style={{ maxWidth: '90vw', maxHeight: '80vh', borderRadius: '8px', backgroundColor: '#000' }}
+              />
+            ) : (
+              <img src={previewImage} alt="Full evidence preview" />
+            )}
             <button className="media-preview-close" onClick={() => setPreviewImage(null)}>
               ✕
             </button>
