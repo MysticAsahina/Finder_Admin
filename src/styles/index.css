@@ -1434,10 +1434,24 @@ tbody tr:hover{background:var(--brand-ll);}
 
 
 /* ── WALLET & FINANCE PAGE ── */
+.page:has(.wallet-page) {
+  animation: none !important;
+  transform: none !important;
+}
+
 .wallet-page {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
+  width: 100%;
+}
+
+/* Top section: Header & 4 stat cards (scrolls up out of view on scroll) */
+.wallet-top-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex-shrink: 0;
 }
 
 .wallet-header {
@@ -1595,11 +1609,16 @@ tbody tr:hover{background:var(--brand-ll);}
   gap: 5px;
 }
 
-/* Toolbar & Filter Bar */
-/* Ensure wallet page has smooth scrolling and no parent transform blocking sticky */
-.page:has(.wallet-page) {
-  animation: none !important;
-  transform: none !important;
+/* ── Main Ledger Section: Fixed to 100vh - 108px so outer page scrolling ends when toolbar hits top ── */
+.wallet-main-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: calc(100vh - 108px);
+  min-height: calc(100vh - 108px);
+  max-height: calc(100vh - 108px);
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .wallet-toolbar-card {
@@ -1614,7 +1633,7 @@ tbody tr:hover{background:var(--brand-ll);}
   display: flex;
   flex-direction: column;
   gap: 14px;
-  transition: box-shadow 0.2s ease;
+  flex-shrink: 0;
 }
 
 .wallet-toolbar-row {
@@ -1730,8 +1749,10 @@ tbody tr:hover{background:var(--brand-ll);}
   text-decoration: underline;
 }
 
-/* Ledger Table Wrap */
+/* ── Ledger Table Card (Takes remaining vertical height, fits screen) ── */
 .wallet-table-card {
+  flex: 1;
+  min-height: 0;
   background: var(--white);
   border-radius: var(--radius);
   border: 1.5px solid var(--border-l);
@@ -1742,7 +1763,8 @@ tbody tr:hover{background:var(--brand-ll);}
 }
 
 .wallet-table-header {
-  padding: 16px 22px;
+  flex-shrink: 0;
+  padding: 14px 22px;
   border-bottom: 1.5px solid var(--border-l);
   display: flex;
   align-items: center;
@@ -1770,11 +1792,11 @@ tbody tr:hover{background:var(--brand-ll);}
 
 .wallet-table-container,
 .wallet-table-scroll {
+  flex: 1;
+  min-height: 0;
   overflow-x: auto;
   overflow-y: auto;
   width: 100%;
-  height: 480px;
-  max-height: 480px;
   position: relative;
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
@@ -1824,7 +1846,7 @@ tbody tr:hover{background:var(--brand-ll);}
 }
 
 .wallet-table td {
-  padding: 14px 18px;
+  padding: 13px 18px;
   border-bottom: 1px solid var(--border-l);
   font-size: 0.82rem;
   vertical-align: middle;
@@ -1958,7 +1980,8 @@ tbody tr:hover{background:var(--brand-ll);}
 
 /* Pagination Bar */
 .wallet-pagination-bar {
-  padding: 14px 22px;
+  flex-shrink: 0;
+  padding: 12px 22px;
   border-top: 1.5px solid var(--border-l);
   display: flex;
   align-items: center;
