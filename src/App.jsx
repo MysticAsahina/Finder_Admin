@@ -77,6 +77,8 @@ export default function App() {
 
   useEffect(() => {
     fetchBadges();
+    const interval = setInterval(fetchBadges, 3000);
+    return () => clearInterval(interval);
   }, [fetchBadges]);
 
   // --- Session Timeout (idle timer) ---

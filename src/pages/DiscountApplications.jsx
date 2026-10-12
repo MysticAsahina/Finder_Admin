@@ -628,8 +628,8 @@ export default function DiscountApplications({ isActive }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
 
-  const fetchApplications = async () => {
-    setLoading(true);
+  const fetchApplications = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const res = await fetch(`${API_URL}/admin/discount-applications`, {
         headers: { 'Authorization': `Bearer ${accessToken}` },
@@ -641,13 +641,17 @@ export default function DiscountApplications({ isActive }) {
     } catch (e) {
       console.error("Failed to fetch discount applications", e);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
   useEffect(() => {
     if (!isActive) return;
-    fetchApplications();
+    fetchApplications(true);
+    const interval = setInterval(() => {
+      fetchApplications(false);
+    }, 3000);
+    return () => clearInterval(interval);
   }, [isActive]);
 
   // Status counts

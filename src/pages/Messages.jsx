@@ -105,10 +105,7 @@ export default function Messages({ role = "passenger", isActive }) {
       return () => socket.disconnect()
     }, [accessToken, role])
 
-  // Reload the ticket list whenever the admin returns to this tab, so it
-  // doesn't go stale while they were away (the socket above stays connected
-  // the whole time and keeps it updated in real time, but this covers
-  // anything missed e.g. around a reconnect).
+  // Reload the ticket list with live auto-refresh while on this tab
   useEffect(() => {
     if (!isActive || !accessToken) return
 
@@ -118,16 +115,20 @@ export default function Messages({ role = "passenger", isActive }) {
           headers: { 'Authorization': `Bearer ${accessToken}` },
         })
         const data = await res.json()
-        setTickets(data.tickets || [])
+        if (data.tickets) {
+          setTickets(data.tickets)
+        }
       } catch (err) {
         console.error("Error reloading tickets:", err)
       }
     }
     reloadTickets()
+    const interval = setInterval(reloadTickets, 3000)
+    return () => clearInterval(interval)
   }, [isActive, accessToken, role])
 
   useEffect(() => {
-    if (!selected || !accessToken) return
+    if (!selected || !accessToken || !isActive) return
 
     // Notify App.jsx to clear the unread badge for this ticket
     window.dispatchEvent(new CustomEvent('ticket_read', { detail: selected._id }))
@@ -139,7 +140,9 @@ export default function Messages({ role = "passenger", isActive }) {
           { headers: { 'Authorization': `Bearer ${accessToken}` } }
         )
         const data = await res.json()
-        setMessages(data.messages || [])
+        if (data.messages) {
+          setMessages(data.messages)
+        }
         
         // Update local ticket list to remove unread badge since we just fetched it
         setTickets(prev => prev.map(t => 
@@ -150,6 +153,7 @@ export default function Messages({ role = "passenger", isActive }) {
       }
     }
     loadMessages()
+    const msgInterval = setInterval(loadMessages, 2500)
 
     // Join the ticket's socket room so we receive real-time messages for it
     if (socketRef.current) {
@@ -158,11 +162,12 @@ export default function Messages({ role = "passenger", isActive }) {
 
     // Leave the room when switching to a different ticket
     return () => {
+      clearInterval(msgInterval)
       if (socketRef.current) {
         socketRef.current.emit('leave_ticket', { ticketId: selected._id })
       }
     }
-  }, [selected])
+  }, [selected?._id, isActive, accessToken])
 
   useEffect(() => {
     if (bodyRef.current) {

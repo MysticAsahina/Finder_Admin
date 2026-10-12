@@ -1,4 +1,5 @@
-import { useContext, useEffect, useRef, useState } from 'react'
+import { useContext, useEffect, useRef, useState, useCallback } from 'react'
+import { io } from 'socket.io-client'
 import { AuthContext } from '../context/AuthContext'
 import Swal from 'sweetalert2'
 
@@ -190,6 +191,7 @@ export default function UserAppeals({ isActive }) {
   const [replyText, setReplyText] = useState('')
   const [previewImage, setPreviewImage] = useState(null)
   const bodyRef = useRef(null)
+  const socketRef = useRef(null)
 
   // Persist appeals in localStorage
   useEffect(() => {
@@ -198,28 +200,144 @@ export default function UserAppeals({ isActive }) {
     } catch (e) {}
   }, [appeals]);
 
-  // Attempt to load from API if backend supports appeals endpoint
-  useEffect(() => {
+  const fetchBackendAppeals = useCallback(async () => {
     if (!accessToken) return;
-
-    async function fetchBackendAppeals() {
-      try {
-        const res = await fetch(`${API_URL}/admin/appeals`, {
-          headers: { 'Authorization': `Bearer ${accessToken}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data.appeals) && data.appeals.length > 0) {
-            setAppeals(data.appeals);
-          }
+    try {
+      const res = await fetch(`${API_URL}/admin/appeals`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.appeals)) {
+          setAppeals(data.appeals);
         }
-      } catch (err) {
-        // Fallback to local state
       }
+    } catch (err) {
+      // Fallback to local state
+    }
+  }, [accessToken]);
+
+  // Live auto-polling fallback every 2.5s (runs seamlessly in the background)
+  useEffect(() => {
+    if (!accessToken || !isActive) return;
+
+    fetchBackendAppeals();
+    const interval = setInterval(fetchBackendAppeals, 2500);
+    return () => clearInterval(interval);
+  }, [accessToken, isActive, fetchBackendAppeals]);
+
+  // Connect to Socket.IO for instant live updates like in Drivers Messages page
+  useEffect(() => {
+    if (!accessToken || !isActive) return;
+
+    const socket = io(API_URL, {
+      auth: { token: accessToken },
+    });
+
+    const handleIncomingMessage = (newMsg) => {
+      if (!newMsg) return;
+      const targetId = newMsg.ticketId || newMsg.appealId || newMsg._id;
+
+      setAppeals(prev => {
+        let matched = false;
+        const next = prev.map(item => {
+          const isMatch = item._id === targetId || (selectedId && item._id === selectedId && (newMsg.ticketId === item._id || newMsg.appealId === item._id));
+          if (isMatch) {
+            matched = true;
+            const currentMsgs = item.messages || [];
+            if (currentMsgs.some(m => m._id === newMsg._id)) return item;
+
+            const isOwnOptimistic = currentMsgs.some(m =>
+              m.body === newMsg.body &&
+              m.senderRole === newMsg.senderRole &&
+              String(m._id).startsWith('msg-')
+            );
+
+            if (isOwnOptimistic) {
+              return {
+                ...item,
+                updatedAt: newMsg.createdAt || item.updatedAt,
+                messages: currentMsgs.map(m =>
+                  (m.body === newMsg.body && m.senderRole === newMsg.senderRole && String(m._id).startsWith('msg-'))
+                    ? newMsg
+                    : m
+                )
+              };
+            }
+
+            return {
+              ...item,
+              updatedAt: newMsg.createdAt || new Date().toISOString(),
+              hasUnreadAdmin: selectedId !== item._id,
+              messages: [...currentMsgs, newMsg]
+            };
+          }
+          return item;
+        });
+
+        if (!matched) {
+          fetchBackendAppeals();
+        }
+        return next;
+      });
+    };
+
+    socket.on('receive_message', (newMsg) => {
+      handleIncomingMessage(newMsg);
+    });
+
+    socket.on('appeal_message', (data) => {
+      const msg = data.message || data;
+      handleIncomingMessage(msg);
+    });
+
+    socket.on('new_appeal', (newAppeal) => {
+      if (!newAppeal || !newAppeal._id) return;
+      setAppeals(prev => {
+        if (prev.some(a => a._id === newAppeal._id)) return prev;
+        return [newAppeal, ...prev];
+      });
+      window.dispatchEvent(new CustomEvent('ticket_read'));
+    });
+
+    socket.on('appeal_updated', () => {
+      fetchBackendAppeals();
+    });
+
+    socket.on('appeal_resolved', (data) => {
+      const id = data?.appealId || data?._id;
+      if (id) {
+        setAppeals(prev => prev.map(a => a._id === id ? { ...a, status: data.status || 'lifted' } : a));
+      } else {
+        fetchBackendAppeals();
+      }
+    });
+
+    socketRef.current = socket;
+    return () => socket.disconnect();
+  }, [accessToken, isActive, selectedId, fetchBackendAppeals]);
+
+  // Join the selected appeal's room on Socket.IO so we receive user messages immediately
+  useEffect(() => {
+    if (!selectedId || !accessToken || !isActive) return;
+
+    // Clear unread badge for the currently open appeal
+    setAppeals(prev => prev.map(a => a._id === selectedId ? { ...a, hasUnreadAdmin: false } : a));
+
+    if (socketRef.current) {
+      socketRef.current.emit('join_ticket', { ticketId: selectedId });
+      socketRef.current.emit('join_appeal', { appealId: selectedId });
     }
 
     fetchBackendAppeals();
-  }, [accessToken, isActive]);
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.emit('leave_ticket', { ticketId: selectedId });
+        socketRef.current.emit('leave_appeal', { appealId: selectedId });
+      }
+    };
+  }, [selectedId, isActive, accessToken, fetchBackendAppeals]);
 
   // Scroll messages to bottom on update
   useEffect(() => {
@@ -402,6 +520,8 @@ export default function UserAppeals({ isActive }) {
     const messageText = replyText.trim();
     const newMsg = {
       _id: 'msg-' + Date.now(),
+      ticketId: selected._id,
+      appealId: selected._id,
       senderRole: 'admin',
       senderName: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'System Administrator' : 'System Administrator',
       body: messageText,
@@ -421,15 +541,38 @@ export default function UserAppeals({ isActive }) {
       return item;
     }));
 
+    if (socketRef.current) {
+      socketRef.current.emit('send_message', {
+        ticketId: selected._id,
+        appealId: selected._id,
+        body: messageText,
+        senderRole: 'admin',
+      });
+    }
+
     try {
-      await fetch(`${API_URL}/admin/appeals/${selected._id}/messages`, {
+      const res = await fetch(`${API_URL}/admin/appeals/${selected._id}/messages`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ body: messageText })
-      }).catch(() => {});
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.message) {
+          setAppeals(prev => prev.map(item => {
+            if (item._id === selected._id) {
+              return {
+                ...item,
+                messages: (item.messages || []).map(m => m._id === newMsg._id ? { ...data.message, senderRole: "admin" } : m)
+              };
+            }
+            return item;
+          }));
+        }
+      }
     } catch (e) {}
   };
 

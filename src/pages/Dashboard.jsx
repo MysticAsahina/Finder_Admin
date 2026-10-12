@@ -98,19 +98,39 @@ export default function Dashboard({ isActive }) {
 
   useEffect(() => {
     if (!accessToken || !isActive) return
-    setLoading(true)
-    setError(null)
+    let isMounted = true
 
-    fetch(`${API_URL}/admin/dashboard`, {
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-    })
-      .then(r => r.json())
-      .then(json => {
-        if (!json.success) throw new Error(json.message || 'Failed to load dashboard.')
-        setData(json)
+    const loadDashboard = (showSpinner = false) => {
+      if (showSpinner) {
+        setLoading(true)
+        setError(null)
+      }
+      fetch(`${API_URL}/admin/dashboard`, {
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
       })
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false))
+        .then(r => r.json())
+        .then(json => {
+          if (!isMounted) return
+          if (!json.success) throw new Error(json.message || 'Failed to load dashboard.')
+          setData(json)
+        })
+        .catch(err => {
+          if (isMounted && showSpinner) setError(err.message)
+        })
+        .finally(() => {
+          if (isMounted && showSpinner) setLoading(false)
+        })
+    }
+
+    loadDashboard(true)
+    const interval = setInterval(() => {
+      loadDashboard(false)
+    }, 4000)
+
+    return () => {
+      isMounted = false
+      clearInterval(interval)
+    }
   }, [accessToken, isActive])
 
   // ── derived bar chart data ─────────────────────────────────────────────────

@@ -121,62 +121,73 @@ export default function Drivers({ isActive }) {
     }
     
     let cancelled = false;
-    setLoading(true);
-    setError(null);
-    
-    fetch(`${API_URL}/admin/drivers`, {
-      headers: { 'Authorization': `Bearer ${accessToken}` }
-    })
-      .then(r => r.json())
-      .then(data => {
-        if (!cancelled) {
-          if (data.drivers && data.drivers.length > 0) {
-            const driversWithAvatars = data.drivers.map(d => ({
-              ...d,
-              avatarStyle: stringToColor(d._id || d.id),
-              badgeClass: d.status === 'Online' ? 'green' : d.status === 'Offline' ? 'gray' : 'yellow'
-            }));
-            setDrivers(driversWithAvatars);
-          } else {
-            // Fallback to sample drivers if backend returns empty
+
+    const loadDriverData = (isInitial = false) => {
+      if (isInitial) {
+        setLoading(true);
+        setError(null);
+      }
+      
+      fetch(`${API_URL}/admin/drivers`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (!cancelled) {
+            if (data.drivers && data.drivers.length > 0) {
+              const driversWithAvatars = data.drivers.map(d => ({
+                ...d,
+                avatarStyle: stringToColor(d._id || d.id),
+                badgeClass: d.status === 'Online' ? 'green' : d.status === 'Offline' ? 'gray' : 'yellow'
+              }));
+              setDrivers(driversWithAvatars);
+            } else {
+              // Fallback to sample drivers if backend returns empty
+              setDrivers(SAMPLE_DRIVERS.map(d => ({
+                ...d,
+                avatarStyle: stringToColor(d.id),
+                badgeClass: d.status === 'Online' ? 'green' : 'gray'
+              })));
+            }
+          }
+        })
+        .catch(err => {
+          if (!cancelled && isInitial) {
+            // If offline or network error, fallback gracefully to sample drivers
             setDrivers(SAMPLE_DRIVERS.map(d => ({
               ...d,
               avatarStyle: stringToColor(d.id),
               badgeClass: d.status === 'Online' ? 'green' : 'gray'
             })));
           }
-        }
-      })
-      .catch(err => {
-        if (!cancelled) {
-          // If offline or network error, fallback gracefully to sample drivers
-          setDrivers(SAMPLE_DRIVERS.map(d => ({
-            ...d,
-            avatarStyle: stringToColor(d.id),
-            badgeClass: d.status === 'Online' ? 'green' : 'gray'
-          })));
-        }
-        console.error(err);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+          console.error(err);
+        })
+        .finally(() => {
+          if (!cancelled && isInitial) setLoading(false);
+        });
 
-    fetch(`${API_URL}/admin/flagged-accounts`, { headers: { 'Authorization': `Bearer ${accessToken}` } })
-      .then(r => r.json())
-      .then(data => {
-        if (!cancelled) setFlaggedAccounts(data);
-      })
-      .catch(err => console.error(err));
+      fetch(`${API_URL}/admin/flagged-accounts`, { headers: { 'Authorization': `Bearer ${accessToken}` } })
+        .then(r => r.json())
+        .then(data => {
+          if (!cancelled) setFlaggedAccounts(data);
+        })
+        .catch(err => console.error(err));
 
-    fetch(`${API_URL}/admin/suspended-accounts`, { headers: { 'Authorization': `Bearer ${accessToken}` } })
-      .then(r => r.json())
-      .then(data => {
-        if (!cancelled && Array.isArray(data)) setSuspendedAccounts(data);
-      })
-      .catch(err => console.error(err));
+      fetch(`${API_URL}/admin/suspended-accounts`, { headers: { 'Authorization': `Bearer ${accessToken}` } })
+        .then(r => r.json())
+        .then(data => {
+          if (!cancelled && Array.isArray(data)) setSuspendedAccounts(data);
+        })
+        .catch(err => console.error(err));
+    };
 
-    return () => { cancelled = true; };
+    loadDriverData(true);
+    const interval = setInterval(() => loadDriverData(false), 3500);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [accessToken, isActive]);
 
   const handleSelectAction = async (account, actionType) => {

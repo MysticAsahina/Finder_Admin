@@ -95,9 +95,11 @@ export default function Analytics({ isActive }) {
   const [error,   setError]   = useState(null)
 
   // ── fetch ──────────────────────────────────────────────────────────────────
-  const fetchAnalytics = useCallback(async () => {
-    setLoading(true)
-    setError(null)
+  const fetchAnalytics = useCallback(async (showLoading = true) => {
+    if (showLoading) {
+      setLoading(true)
+      setError(null)
+    }
     try {
       const res = await fetch(
         `${API_URL}/admin/analytics?month=${selectedMonth}&year=${selectedYear}`,
@@ -108,15 +110,19 @@ export default function Analytics({ isActive }) {
       if (!json.success) throw new Error(json.message || 'Unknown error')
       setData(json)
     } catch (err) {
-      setError(err.message)
+      if (showLoading) setError(err.message)
     } finally {
-      setLoading(false)
+      if (showLoading) setLoading(false)
     }
-  }, [selectedMonth, selectedYear])
+  }, [selectedMonth, selectedYear, accessToken])
 
   useEffect(() => {
     if (!isActive) return
-    fetchAnalytics()
+    fetchAnalytics(true)
+    const interval = setInterval(() => {
+      fetchAnalytics(false)
+    }, 5000)
+    return () => clearInterval(interval)
   }, [fetchAnalytics, isActive])
 
   // ── derived chart data ─────────────────────────────────────────────────────
