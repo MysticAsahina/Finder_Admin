@@ -5,87 +5,14 @@ import Swal from 'sweetalert2';
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 const DEFAULT_SUMMARY = {
-  totalPassengerFloat: 148520.50,
-  totalDriverFloat: 62450.00,
-  totalFeesCollected: 18940.00,
-  totalCashInVolume: 324100.00,
-  totalCashOutVolume: 182300.00,
+  totalPassengerFloat: 0,
+  totalDriverFloat: 0,
+  totalFeesCollected: 0,
+  totalCashInVolume: 0,
+  totalCashOutVolume: 0,
 };
 
-const DEFAULT_TRANSACTIONS = [
-  {
-    _id: 'tx-001',
-    referenceNumber: 'TX-2026-98104',
-    userId: { firstName: 'Juan', lastName: 'Dela Cruz', mobileNumber: '09171234567' },
-    userRole: 'passenger',
-    type: 'cash_in',
-    amount: 500.00,
-    fee: 15.00,
-    status: 'completed',
-    createdAt: '2026-10-12T14:32:00.000Z',
-    description: 'GCash Top-up via Finder Passenger App'
-  },
-  {
-    _id: 'tx-002',
-    referenceNumber: 'TX-2026-98103',
-    userId: { firstName: 'Eduardo', lastName: 'Reyes', mobileNumber: '09289876543' },
-    userRole: 'driver',
-    type: 'fare_earning',
-    amount: 145.00,
-    fee: 0.00,
-    status: 'completed',
-    createdAt: '2026-10-12T14:15:00.000Z',
-    description: 'Ride fare settlement #TRIP-8821'
-  },
-  {
-    _id: 'tx-003',
-    referenceNumber: 'TX-2026-98102',
-    userId: { firstName: 'Maria', lastName: 'Santos', mobileNumber: '09987654321' },
-    userRole: 'passenger',
-    type: 'fare_deduction',
-    amount: 145.00,
-    fee: 0.00,
-    status: 'completed',
-    createdAt: '2026-10-12T14:15:00.000Z',
-    description: 'Prepaid fare payment for trip to City Mall'
-  },
-  {
-    _id: 'tx-004',
-    referenceNumber: 'TX-2026-98101',
-    userId: { firstName: 'Roberto', lastName: 'Mendoza', mobileNumber: '09054433221' },
-    userRole: 'driver',
-    type: 'cash_out',
-    amount: 2500.00,
-    fee: 25.00,
-    status: 'completed',
-    createdAt: '2026-10-12T11:40:00.000Z',
-    description: 'Driver E-Wallet Disbursement to GCash'
-  },
-  {
-    _id: 'tx-005',
-    referenceNumber: 'TX-2026-98099',
-    userId: { firstName: 'Ana', lastName: 'Lim', mobileNumber: '09331122334' },
-    userRole: 'passenger',
-    type: 'cash_in',
-    amount: 1000.00,
-    fee: 25.00,
-    status: 'completed',
-    createdAt: '2026-10-12T09:20:00.000Z',
-    description: 'Maya Top-up via Passenger Wallet'
-  },
-  {
-    _id: 'tx-006',
-    referenceNumber: 'TX-2026-98098',
-    userId: { firstName: 'Carlos', lastName: 'Villanueva', mobileNumber: '09456789012' },
-    userRole: 'driver',
-    type: 'cash_out',
-    amount: 1200.00,
-    fee: 15.00,
-    status: 'pending',
-    createdAt: '2026-10-12T08:50:00.000Z',
-    description: 'Bank transfer payout pending verification'
-  }
-];
+const DEFAULT_TRANSACTIONS = [];
 
 export default function WalletTransactions({ isActive }) {
   const { accessToken } = useContext(AuthContext);
@@ -129,7 +56,7 @@ export default function WalletTransactions({ isActive }) {
 
       if (txRes.ok) {
         const txData = await txRes.json();
-        if (Array.isArray(txData.transactions) && txData.transactions.length > 0) {
+        if (Array.isArray(txData.transactions)) {
           setTransactions(txData.transactions);
         }
       }
