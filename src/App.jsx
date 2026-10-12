@@ -14,6 +14,7 @@ import Applications from './pages/Applications'
 import DiscountApplications from './pages/DiscountApplications'
 import PassengerMessages from './pages/Messages'
 import DriverMessages from './pages/DriverMessages'
+import UserAppeals from './pages/UserAppeals'
 import Reports from './pages/Reports'
 import FareManagement from './pages/FareManagement'
 import AuditLog from './pages/AuditLog'
@@ -29,6 +30,7 @@ const PAGE_MAP = {
   discountApplications: DiscountApplications,
   passengerMessages: PassengerMessages,
   driverMessages: DriverMessages,
+  userAppeals: UserAppeals,
   reports: Reports,
   fare: FareManagement,
   audit: AuditLog,
@@ -46,7 +48,8 @@ export default function App() {
     pendingApplications: 0,
     pendingDiscountApplications: 0,
     unreadPassengerTickets: 0,
-    unreadDriverTickets: 0
+    unreadDriverTickets: 0,
+    pendingAppeals: 2
   });
 
   const fetchBadges = useCallback(async () => {
@@ -235,6 +238,7 @@ export default function App() {
           unreadDiscountApps={badges.pendingDiscountApplications}
           unreadPassengerTickets={badges.unreadPassengerTickets}
           unreadDriverTickets={badges.unreadDriverTickets}
+          unreadAppeals={badges.pendingAppeals !== undefined ? badges.pendingAppeals : 2}
         />
         <div className="main">
           <Topbar activePage={activePage} />

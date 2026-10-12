@@ -8,6 +8,7 @@ const PAGE_TITLES = {
   discountApplications: ['Applications', 'Special Discount'],
   passengerMessages: ['Messages', 'Passenger Inquiries'],
   driverMessages: ['Messages', 'Driver Inquiries'],
+  userAppeals: ['Users Appeal', 'Suspension Review & Decisions'],
   reports: ['Reports', 'Operational Data'],
   fare: ['Fare Management', 'Price Configuration'],
   audit: ['Audit Log', 'System Activity'],

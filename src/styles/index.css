@@ -876,3 +876,456 @@ tbody tr:hover{background:var(--brand-ll);}
   white-space: nowrap;
 }
 
+
+/* ══════════════════════════════════════════════════════════════════
+   USER APPEALS PAGE STYLING
+   ══════════════════════════════════════════════════════════════════ */
+.appeals-page-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.appeals-top-header {
+  background: var(--white);
+  padding: 16px 20px;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border-l);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.appeals-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.appeals-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0;
+}
+
+.appeals-desc {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.appeals-filter-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-l);
+}
+
+.appeals-pill-tabs {
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg2);
+  padding: 3px;
+  border-radius: 10px;
+  gap: 4px;
+}
+
+.appeals-pill-btn {
+  background: transparent;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.appeals-pill-btn:hover {
+  color: var(--text);
+}
+
+.appeals-pill-btn.active {
+  background: var(--white);
+  color: var(--brand);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.appeals-pill-tabs.secondary .appeals-pill-btn.active {
+  color: var(--text);
+}
+
+.appeals-pill-btn.sm {
+  padding: 5px 11px;
+  font-size: 0.74rem;
+}
+
+.appeals-layout {
+  height: 600px;
+}
+
+.appeal-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.appeal-role-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.appeal-role-tag.passenger {
+  background: #FFF0E6;
+  color: #FF5F00;
+}
+
+.appeal-role-tag.driver {
+  background: #EFF6FF;
+  color: #2563EB;
+}
+
+.appeal-ticket-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.appeal-ticket-code {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--muted);
+  font-family: monospace;
+}
+
+.appeal-preview-text {
+  font-size: 0.76rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.appeal-item-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+
+.appeal-has-proof {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  color: var(--muted);
+  background: var(--bg2);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Detail view */
+.appeals-detail-head {
+  padding: 14px 20px;
+}
+
+.appeals-user-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.appeals-avatar-circle {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FF5F00, #FF8A3D);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(255, 95, 0, 0.25);
+}
+
+.appeal-ticket-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: var(--bg2);
+  color: var(--muted);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+/* Decision Action Buttons */
+.appeals-decision-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-appeal-decision {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-appeal-decision.lift {
+  background: #16a34a;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25);
+}
+
+.btn-appeal-decision.lift:hover {
+  background: #15803d;
+  transform: translateY(-1px);
+}
+
+.btn-appeal-decision.disable {
+  background: #dc2626;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.25);
+}
+
+.btn-appeal-decision.disable:hover {
+  background: #b91c1c;
+  transform: translateY(-1px);
+}
+
+.appeals-resolved-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.appeals-resolved-tag.success {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.appeals-resolved-tag.danger {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+/* Overview card inside body */
+.appeal-summary-card {
+  background: #fffdfb;
+  border: 1.5px solid #fed7aa;
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.appeal-summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #ffedd5;
+  padding-bottom: 10px;
+}
+
+.appeal-summary-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 0.88rem;
+  color: #9a3412;
+}
+
+.appeal-date-tag {
+  font-size: 0.72rem;
+  color: #c2410c;
+  font-weight: 600;
+}
+
+.appeal-grid-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.appeal-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.info-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.info-value {
+  font-size: 0.82rem;
+  color: var(--text);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.info-value.reason {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.appeal-proof-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.appeal-proof-thumb {
+  position: relative;
+  width: 140px;
+  height: 90px;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1.5px solid #fed7aa;
+}
+
+.appeal-proof-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.2s ease;
+}
+
+.appeal-proof-thumb:hover img {
+  transform: scale(1.05);
+}
+
+.appeal-proof-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.appeal-proof-thumb:hover .appeal-proof-overlay {
+  opacity: 1;
+}
+
+.appeal-proof-overlay span {
+  font-size: 0.62rem;
+  color: white;
+  font-weight: 600;
+  text-align: center;
+}
+
+.appeal-thread-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 10px 0;
+  position: relative;
+}
+
+.appeal-thread-divider::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--border-l);
+}
+
+.appeal-thread-divider span {
+  position: relative;
+  background: var(--white);
+  padding: 0 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.appeal-system-bubble {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg2);
+  border: 1px solid var(--border-l);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin: 6px 0;
+}
+
+.appeals-footer-resolved {
+  padding: 14px 20px;
+  background: var(--bg);
+  border-top: 1.5px solid var(--border-l);
+}
+
+.resolved-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.resolved-banner.green {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.resolved-banner.red {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}

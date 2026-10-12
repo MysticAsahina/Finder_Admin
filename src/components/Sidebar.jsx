@@ -8,13 +8,14 @@ const PAGE_TITLES = {
   applications: ['Applications', 'Pending Reviews'],
   discountApplications: ['Applications', 'Special Discount'],
   messages: ['Messages', 'Passenger Inquiries'],
+  userAppeals: ['Users Appeal', 'Suspension Review & Decisions'],
   reports: ['Reports', 'Operational Data'],
   fare: ['Fare Management', 'Price Configuration'],
   audit: ['Audit Log', 'System Activity'],
   settings: ['Settings', 'Admin Preferences'],
 }
 
-export default function Sidebar({ activePage, setActivePage, onLogout, unreadApps, unreadDiscountApps, unreadPassengerTickets, unreadDriverTickets }) {
+export default function Sidebar({ activePage, setActivePage, onLogout, unreadApps, unreadDiscountApps, unreadPassengerTickets, unreadDriverTickets, unreadAppeals }) {
   const { user } = useContext(AuthContext);
   const [firstName, setFirstName] = useState(user?.firstName || 'N/A');
   const [lastName, setLastName] = useState(user?.lastName || 'N/A');
