@@ -11,6 +11,7 @@ const PAGE_TITLES = {
   userAppeals: ['Users Appeal', 'Suspension Review & Decisions'],
   reports: ['Reports', 'Operational Data'],
   fare: ['Fare Management', 'Price Configuration'],
+  wallet: ['Wallet & Finance', 'Digital Float & Transactions'],
   audit: ['Audit Log', 'System Activity'],
   settings: ['Settings', 'Admin Preferences'],
 }
@@ -99,6 +100,16 @@ export default function Sidebar({ activePage, setActivePage, onLogout, unreadApp
           id: 'fare',
           label: 'Fare Management',
           icon: <svg viewBox="0 0 24 24" fill="none"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>,
+        },
+        {
+          id: 'wallet',
+          label: 'Wallet & Finance',
+          icon: (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="4" width="20" height="16" rx="2" />
+              <line x1="2" y1="10" x2="22" y2="10" />
+            </svg>
+          ),
         },
         {
           id: 'audit',

@@ -18,6 +18,7 @@ import UserAppeals from './pages/UserAppeals'
 import Reports from './pages/Reports'
 import FareManagement from './pages/FareManagement'
 import AuditLog from './pages/AuditLog'
+import WalletTransactions from './pages/WalletTransactions'
 import Settings from './pages/Settings'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
@@ -33,6 +34,7 @@ const PAGE_MAP = {
   userAppeals: UserAppeals,
   reports: Reports,
   fare: FareManagement,
+  wallet: WalletTransactions,
   audit: AuditLog,
   settings: Settings,
 }
