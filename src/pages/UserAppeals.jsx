@@ -389,14 +389,15 @@ export default function UserAppeals({ isActive }) {
   };
 
   // Send Admin message in appeal thread
-  const handleSendReply = () => {
+  const handleSendReply = async () => {
     if (!replyText.trim() || !selected) return;
 
+    const messageText = replyText.trim();
     const newMsg = {
       _id: 'msg-' + Date.now(),
       senderRole: 'admin',
-      senderName: 'System Administrator',
-      body: replyText.trim(),
+      senderName: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'System Administrator' : 'System Administrator',
+      body: messageText,
       createdAt: new Date().toISOString()
     };
 
@@ -412,6 +413,17 @@ export default function UserAppeals({ isActive }) {
       }
       return item;
     }));
+
+    try {
+      await fetch(`${API_URL}/admin/appeals/${selected._id}/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ body: messageText })
+      }).catch(() => {});
+    } catch (e) {}
   };
 
     // Two-step Re-evaluation confirmation: Type "DELETE" + Email OTP verification

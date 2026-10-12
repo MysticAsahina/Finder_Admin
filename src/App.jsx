@@ -49,7 +49,7 @@ export default function App() {
     pendingDiscountApplications: 0,
     unreadPassengerTickets: 0,
     unreadDriverTickets: 0,
-    pendingAppeals: 2
+    pendingAppeals: 0
   });
 
   const fetchBadges = useCallback(async () => {
@@ -64,7 +64,8 @@ export default function App() {
           pendingApplications: data.pendingApplications,
           pendingDiscountApplications: data.pendingDiscountApplications,
           unreadPassengerTickets: data.unreadPassengerTickets,
-          unreadDriverTickets: data.unreadDriverTickets
+          unreadDriverTickets: data.unreadDriverTickets,
+          pendingAppeals: data.pendingAppeals !== undefined ? data.pendingAppeals : 0
         });
       }
     } catch (err) {
@@ -157,6 +158,30 @@ export default function App() {
       fetchBadges();
     });
 
+    socket.on('new_appeal', (data) => {
+      fetchBadges();
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'warning',
+        title: `New suspension appeal: ${data?.ticketNumber || 'Case'}`,
+        text: `From ${data?.userName || 'a user'} (${data?.userRole || ''})`,
+        showConfirmButton: false,
+        timer: 4500,
+        timerProgressBar: true,
+        background: 'var(--white)',
+        color: 'var(--text)',
+      });
+    });
+
+    socket.on('appeal_updated', () => {
+      fetchBadges();
+    });
+
+    socket.on('appeal_resolved', () => {
+      fetchBadges();
+    });
+
     return () => socket.disconnect();
   }, [accessToken, fetchBadges]);
 
@@ -238,7 +263,7 @@ export default function App() {
           unreadDiscountApps={badges.pendingDiscountApplications}
           unreadPassengerTickets={badges.unreadPassengerTickets}
           unreadDriverTickets={badges.unreadDriverTickets}
-          unreadAppeals={badges.pendingAppeals !== undefined ? badges.pendingAppeals : 2}
+          unreadAppeals={badges.pendingAppeals || 0}
         />
         <div className="main">
           <Topbar activePage={activePage} />
