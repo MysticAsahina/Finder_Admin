@@ -645,7 +645,11 @@ export default function Drivers({ isActive }) {
                 return (
                   <div key={d.id} className="driver-card" onClick={() => setModalDriver(d)}>
                     <div className="driver-head">
-                      <div className="driver-avatar" style={d.avatarStyle}>{d.initials}</div>
+                      {d.profilePicture ? (
+                        <img src={d.profilePicture} alt={d.name} className="driver-avatar" style={{ objectFit: 'cover' }} />
+                      ) : (
+                        <div className="driver-avatar" style={d.avatarStyle}>{d.initials}</div>
+                      )}
                       <div>
                         <div className="driver-name">{d.name}</div>
                         <div className="driver-id">{d.id}</div>

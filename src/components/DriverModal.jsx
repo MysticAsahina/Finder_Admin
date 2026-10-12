@@ -17,9 +17,17 @@ export default function DriverModal({ isOpen, onClose, driver }) {
 
         {/* Profile */}
         <div style={{ display:'flex', alignItems:'center', gap:18, marginBottom:20, padding:24, background:'var(--bg)', borderRadius:18, position:'relative' }}>
-          <div style={{ width:72, height:72, background:'var(--brand)', borderRadius:16, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:'1.6rem', color:'white', boxShadow:'0 4px 12px rgba(250,117,40,0.2)' }}>
-            {initials}
-          </div>
+          {driver.profilePicture ? (
+            <img
+              src={driver.profilePicture}
+              alt={name}
+              style={{ width:72, height:72, borderRadius:16, objectFit:'cover', boxShadow:'0 4px 12px rgba(250,117,40,0.2)' }}
+            />
+          ) : (
+            <div style={{ width:72, height:72, background:'var(--brand)', borderRadius:16, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:'1.6rem', color:'white', boxShadow:'0 4px 12px rgba(250,117,40,0.2)' }}>
+              {initials}
+            </div>
+          )}
           <div>
             <div style={{ fontWeight:700, fontSize:'1.1rem', color:'var(--text)', marginBottom:2 }}>{name}</div>
             <div style={{ fontSize:'0.85rem', color:'var(--subtle)', fontWeight:500 }}>{id}</div>

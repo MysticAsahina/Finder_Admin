@@ -57,6 +57,88 @@ export default function Settings() {
   const [mobileNumber, setMobileNumber] = useState(user?.mobileNumber || 'N/A');
   const [email, setEmail] = useState(user?.email || 'N/A');
   const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      styledSwal.fire('Invalid File', 'Please select a valid image file.', 'error');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      styledSwal.fire('File Too Large', 'Please select an image smaller than 5MB.', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result;
+      setUploadingPhoto(true);
+      try {
+        const res = await fetch(`${API_URL}/auth/profile-picture`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ profilePicture: dataUrl }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.message || 'Failed to update profile picture.');
+        }
+
+        setUser(data.user);
+        styledSwal.fire('Success', 'Profile photo updated successfully!', 'success');
+      } catch (err) {
+        styledSwal.fire('Error', err.message || 'Failed to upload photo.', 'error');
+      } finally {
+        setUploadingPhoto(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemovePhoto = async () => {
+    const confirm = await styledSwal.fire({
+      title: 'Remove Profile Photo?',
+      text: 'Are you sure you want to remove your profile photo?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Remove',
+      cancelButtonText: 'Cancel'
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    setUploadingPhoto(true);
+    try {
+      const res = await fetch(`${API_URL}/auth/profile-picture`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ profilePicture: null }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'Failed to remove profile picture.');
+      }
+
+      setUser(data.user);
+      styledSwal.fire('Removed', 'Profile photo removed successfully.', 'success');
+    } catch (err) {
+      styledSwal.fire('Error', err.message || 'Failed to remove photo.', 'error');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -222,10 +304,49 @@ export default function Settings() {
       <div className="settings-card">
         <div className="settings-title">Admin Account</div>
         <div style={{ display:'flex', alignItems:'center', gap:18, marginBottom:24, padding:24, background:'var(--brand-ll)', borderRadius:14 }}>
-          <div style={{ width:64, height:64, background:'var(--brand)', borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:'1.5rem', color:'white' }}>{user?.firstName?.[0] || 'J'}{user?.lastName?.[0] || 'D'}</div>
-          <div>
+          <div style={{ position: 'relative', width: 64, height: 64, flexShrink: 0 }}>
+            {user?.profilePicture ? (
+              <img
+                src={user.profilePicture}
+                alt="Admin avatar"
+                style={{ width:64, height:64, borderRadius:12, objectFit:'cover', display:'block' }}
+              />
+            ) : (
+              <div style={{ width:64, height:64, background:'var(--brand)', borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:'1.5rem', color:'white' }}>
+                {user?.firstName?.[0] || 'A'}{user?.lastName?.[0] || 'D'}
+              </div>
+            )}
+          </div>
+          <div style={{ flex: 1 }}>
             <div style={{ fontWeight:700, fontSize:'1.1rem', color:'var(--text)', marginBottom:2 }}>{user?.firstName || 'N/A'} {user?.lastName || 'N/A'}</div>
-            <div style={{ fontSize:'0.85rem', color:'var(--muted)' }}>{user?.email || 'N/A'} &nbsp;•&nbsp; System Administrator</div>
+            <div style={{ fontSize:'0.85rem', color:'var(--muted)', marginBottom: 8 }}>{user?.email || 'N/A'} &nbsp;•&nbsp; System Administrator</div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <label
+                className="btn btn-outline"
+                style={{ padding: '4px 12px', fontSize: '0.78rem', cursor: uploadingPhoto ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, opacity: uploadingPhoto ? 0.6 : 1 }}
+              >
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  disabled={uploadingPhoto}
+                  onChange={handlePhotoUpload}
+                />
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                {uploadingPhoto ? 'Uploading...' : (user?.profilePicture ? 'Change Photo' : 'Upload Photo')}
+              </label>
+              {user?.profilePicture && (
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  style={{ padding: '4px 10px', fontSize: '0.78rem', color: 'var(--red)', cursor: uploadingPhoto ? 'not-allowed' : 'pointer' }}
+                  disabled={uploadingPhoto}
+                  onClick={handleRemovePhoto}
+                >
+                  Remove
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

@@ -163,7 +163,11 @@ export default function Sidebar({ activePage, setActivePage, onLogout, unreadApp
 
       <div className="sidebar-bottom">
         <div className="admin-pill">
-          <div className="admin-avatar">JD</div>
+          {user?.profilePicture ? (
+            <img src={user.profilePicture} alt="Admin" className="admin-avatar" style={{ objectFit: 'cover' }} />
+          ) : (
+            <div className="admin-avatar">{user?.firstName?.[0] || 'A'}{user?.lastName?.[0] || 'D'}</div>
+          )}
           <div className="admin-info">
             <div className="admin-name">{user?.firstName || 'N/A'} {user?.lastName || 'N/A'}</div>
             <div className="admin-role">System Administrator</div>
