@@ -426,27 +426,27 @@ export default function UserAppeals({ isActive }) {
     });
   };
 
-  // Action: Disable Account (Appeal Denied / Failed)
-  const handleDisableAccount = () => {
+  // Action: Deny Appeal (Appeal Denied / Suspension Upheld)
+  const handleDenyAppeal = () => {
     if (!selected) return;
 
     styledSwal.fire({
-      title: 'Disable Account?',
+      title: 'Deny Appeal?',
       html: `
         <div style="text-align: left; font-size: 0.9rem; line-height: 1.5; color: #444;">
-          <p>Are you sure you want to <strong>reject this appeal</strong> and permanently disable the account for:</p>
+          <p>Are you sure you want to <strong>deny this appeal</strong> for:</p>
           <div style="background: #fef2f2; border: 1px solid #fecaca; padding: 10px 14px; border-radius: 8px; margin: 10px 0; font-weight: 600; color: #dc2626;">
             ${selected.userName} (${selected.userRole.toUpperCase()})
           </div>
-          <p style="color: #dc2626; font-weight: 500;">✕ This user will be prohibited from logging in and accessing the FINDER platform.</p>
+          <p style="color: #64748b; font-size: 0.85rem;">The appeal will be marked as denied. The user's account remains in the system and their suspension remains active according to policy.</p>
         </div>
       `,
       input: 'textarea',
-      inputLabel: 'Reason for rejection / disablement (optional):',
-      inputPlaceholder: 'Enter notes or reason for permanent account disablement...',
+      inputLabel: 'Reason for denial (optional):',
+      inputPlaceholder: 'Enter notes or reason for appeal denial...',
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: 'Yes, Disable Account',
+      confirmButtonText: 'Yes, Deny Appeal',
       confirmButtonColor: '#dc2626',
       cancelButtonText: 'Cancel'
     }).then(async (result) => {
@@ -457,21 +457,12 @@ export default function UserAppeals({ isActive }) {
       const sysMessage = {
         _id: 'sys-' + Date.now(),
         senderRole: 'system',
-        body: `Appeal rejected. Account permanently disabled by Administrator on ${dateStr}.${reasonNote}`,
+        body: `Appeal denied by Administrator on ${dateStr}.${reasonNote}`,
         createdAt: new Date().toISOString()
       };
 
       // Try backend call
       try {
-        await fetch(`${API_URL}/admin/flagged-accounts/${selected.userId}/action`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ action: 'perm_suspend', reason: result.value || 'Appeal rejected' })
-        }).catch(() => {});
-
         await fetch(`${API_URL}/admin/appeals/${selected._id}/disable`, {
           method: 'PATCH',
           headers: {
@@ -497,8 +488,8 @@ export default function UserAppeals({ isActive }) {
       }));
 
       styledSwal.fire({
-        title: 'Account Disabled',
-        text: `${selected.userName}'s appeal was rejected and their account has been disabled.`,
+        title: 'Appeal Denied',
+        text: `${selected.userName}'s appeal has been denied. The suspension remains active.`,
         icon: 'error',
         timer: 2400,
         showConfirmButton: false
@@ -575,24 +566,24 @@ export default function UserAppeals({ isActive }) {
 
     const adminEmail = user?.email || 'admin@finder.ph';
 
-    // Step 1: Confirmation - Require typing the word "DELETE"
+    // Step 1: Confirmation - Require typing the word "CONFIRM"
     const step1 = await styledSwal.fire({
       title: 'Re-evaluate Appeal Decision?',
       html: `
         <div style="text-align: left; font-size: 0.88rem; line-height: 1.5; color: #444;">
           <p style="margin-bottom: 8px;">
-            Re-evaluating will <strong>reset the current resolution</strong> (${selected.status === 'lifted' ? 'Suspension Lifted' : 'Account Disabled'}) for <strong>${selected.userName}</strong> and return this case to <strong>Pending Review</strong>.
+            Re-evaluating will <strong>reset the current resolution</strong> (${selected.status === 'lifted' ? 'Suspension Lifted' : 'Appeal Denied'}) for <strong>${selected.userName}</strong> and return this case to <strong>Pending Review</strong>.
           </p>
           <div style="background: #fff7ed; border: 1.5px solid #fed7aa; padding: 10px 14px; border-radius: 8px; margin-bottom: 14px;">
             <div style="font-weight: 700; color: #c2410c; font-size: 0.82rem; margin-bottom: 2px;">CRITICAL CONFIRMATION REQUIRED</div>
             <div style="font-size: 0.78rem; color: #9a3412;">
-              Please type the word <strong style="color: #dc2626; font-size: 0.85rem; letter-spacing: 1px;">DELETE</strong> below to continue to security verification.
+              Please type the word <strong style="color: #dc2626; font-size: 0.85rem; letter-spacing: 1px;">CONFIRM</strong> below to continue to security verification.
             </div>
           </div>
         </div>
       `,
       input: 'text',
-      inputPlaceholder: 'Type DELETE here...',
+      inputPlaceholder: 'Type CONFIRM here...',
       inputAttributes: {
         autocapitalize: 'characters',
         autocorrect: 'off',
@@ -604,8 +595,8 @@ export default function UserAppeals({ isActive }) {
       confirmButtonColor: '#FF5F00',
       cancelButtonText: 'Cancel',
       preConfirm: (inputValue) => {
-        if (!inputValue || inputValue.trim().toUpperCase() !== 'DELETE') {
-          styledSwal.showValidationMessage('You must type the word "DELETE" to proceed.');
+        if (!inputValue || inputValue.trim().toUpperCase() !== 'CONFIRM') {
+          styledSwal.showValidationMessage('You must type the word "CONFIRM" to proceed.');
           return false;
         }
         return true;
@@ -691,7 +682,7 @@ export default function UserAppeals({ isActive }) {
     const sysMessage = {
       _id: 'sys-' + Date.now(),
       senderRole: 'system',
-      body: `Appeal re-opened for re-evaluation by Administrator (${adminEmail}) following two-factor security verification ("DELETE" + OTP) on ${dateStr} at ${timeStr}.`,
+      body: `Appeal re-opened for re-evaluation by Administrator (${adminEmail}) following two-factor security verification ("CONFIRM" + OTP) on ${dateStr} at ${timeStr}.`,
       createdAt: new Date().toISOString()
     };
 
@@ -857,7 +848,7 @@ export default function UserAppeals({ isActive }) {
                     )}
                     {appeal.status === 'disabled' && (
                       <span className="badge red">
-                        ✕ Account Disabled
+                        ✕ Appeal Denied
                       </span>
                     )}
 
@@ -913,11 +904,11 @@ export default function UserAppeals({ isActive }) {
 
                       <button
                         className="btn-appeal-decision disable"
-                        onClick={handleDisableAccount}
-                        title="Reject appeal and permanently disable account"
+                        onClick={handleDenyAppeal}
+                        title="Deny this appeal and uphold suspension"
                       >
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-                        Disable Account
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                        Deny Appeal
                       </button>
                     </>
                   ) : (
@@ -931,7 +922,7 @@ export default function UserAppeals({ isActive }) {
                       {selected.status === 'disabled' && (
                         <div className="appeals-resolved-tag danger">
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                          Account Permanently Disabled
+                          Appeal Denied (Suspended)
                         </div>
                       )}
                       <button className="btn btn-ghost btn-sm" onClick={handleReopenAppeal} style={{ fontSize: '0.72rem' }}>
@@ -1056,7 +1047,7 @@ export default function UserAppeals({ isActive }) {
                   ) : (
                     <div className="resolved-banner red">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                      <span>This appeal was rejected. Account has been permanently disabled.</span>
+                      <span>This appeal was denied. The suspension remains active.</span>
                     </div>
                   )}
                 </div>
