@@ -270,11 +270,15 @@ export default function App() {
         <div className="main">
           <Topbar activePage={activePage} />
           <div className={`content${activePage === 'userAppeals' ? ' appeals-view no-scroll' : ''}`}>
-            {Object.entries(PAGE_MAP).map(([key, PageComponent]) => (
-              <div key={key} className={`page${activePage === key ? ' active' : ''}${key === 'userAppeals' ? ' appeals-page-container' : ''}`}>
-                <PageComponent isActive={activePage === key} />
-              </div>
-            ))}
+            {Object.entries(PAGE_MAP).map(([key, PageComponent]) => {
+              // Only render userAppeals DOM when on the Users Appeal tab
+              if (key === 'userAppeals' && activePage !== 'userAppeals') return null;
+              return (
+                <div key={key} className={`page${activePage === key ? ' active' : ''}${key === 'userAppeals' ? ' appeals-page-container' : ''}`}>
+                  <PageComponent isActive={activePage === key} />
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

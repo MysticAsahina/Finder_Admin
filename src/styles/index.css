@@ -882,9 +882,7 @@ tbody tr:hover{background:var(--brand-ll);}
    ══════════════════════════════════════════════════════════════════ */
 
 /* Force .content to NEVER scroll when viewing appeals */
-.content.no-scroll,
-.content.appeals-view,
-.content:has(.appeals-page-wrapper) {
+.content.appeals-view {
   overflow: hidden !important;
   padding: 16px 28px !important;
   display: flex !important;
@@ -894,9 +892,7 @@ tbody tr:hover{background:var(--brand-ll);}
   box-sizing: border-box !important;
 }
 
-.page.appeals-page-container,
-.page.appeals-page-container.active,
-.page:has(.appeals-page-wrapper) {
+.page.appeals-page-container.active {
   height: 100% !important;
   max-height: 100% !important;
   flex: 1 !important;
