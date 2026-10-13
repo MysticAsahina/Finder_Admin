@@ -194,7 +194,9 @@ export default function WalletTransactions({ isActive }) {
 
   return (
     <div className="wallet-page">
-      {/* ── Page Header ── */}
+      {/* ── Top Section: Header & Stat Cards ── */}
+      <div className="wallet-top-section">
+        {/* ── Page Header ── */}
       <div className="wallet-header">
         <div className="wallet-header-title">
           <h1>Financial & Wallet Overview</h1>
@@ -323,9 +325,12 @@ export default function WalletTransactions({ isActive }) {
           </div>
         </div>
       </div>
+      </div>
 
-      {/* ── Interactive Toolbar & Filter Controls ── */}
-      <div className="wallet-toolbar-card">
+      {/* ── Main Ledger Section (Fixed to 100vh - 108px so outer page scrolling ends when toolbar hits top) ── */}
+      <div className="wallet-main-section">
+        {/* ── Interactive Toolbar & Filter Controls ── */}
+        <div className="wallet-toolbar-card">
         <div className="wallet-toolbar-row">
           {/* Search Box */}
           <div className="wallet-search-wrap">
@@ -458,7 +463,7 @@ export default function WalletTransactions({ isActive }) {
           </div>
         </div>
 
-        <div className="wallet-table-scroll">
+        <div className="wallet-table-container wallet-table-scroll">
           <table className="wallet-table">
             <thead>
               <tr>
@@ -671,6 +676,7 @@ export default function WalletTransactions({ isActive }) {
             </div>
           </div>
         )}
+        </div>
       </div>
 
       {/* ── Transaction Receipt Modal ── */}
