@@ -217,13 +217,11 @@ export default function UserAppeals({ isActive }) {
     }
   }, [accessToken]);
 
-  // Live auto-polling fallback every 2.5s (runs seamlessly in the background)
+  // Fetch appeals on mount or when page becomes active (no periodic polling to prevent resetting chat scroll)
   useEffect(() => {
     if (!accessToken || !isActive) return;
 
     fetchBackendAppeals();
-    const interval = setInterval(fetchBackendAppeals, 2500);
-    return () => clearInterval(interval);
   }, [accessToken, isActive, fetchBackendAppeals]);
 
   // Connect to Socket.IO for instant live updates like in Drivers Messages page
@@ -237,6 +235,11 @@ export default function UserAppeals({ isActive }) {
     const handleIncomingMessage = (newMsg) => {
       if (!newMsg) return;
       const targetId = newMsg.ticketId || newMsg.appealId || newMsg._id;
+
+      // Check if admin is currently back-reading earlier messages before scrolling
+      const wasNearBottom = bodyRef.current
+        ? (bodyRef.current.scrollHeight - bodyRef.current.scrollTop - bodyRef.current.clientHeight < 120)
+        : true;
 
       setAppeals(prev => {
         let matched = false;
@@ -280,6 +283,15 @@ export default function UserAppeals({ isActive }) {
         }
         return next;
       });
+
+      // Only auto-scroll to latest chat if user is already at the bottom (not back-reading)
+      if (wasNearBottom) {
+        setTimeout(() => {
+          if (bodyRef.current) {
+            bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
+          }
+        }, 50);
+      }
     };
 
     socket.on('receive_message', (newMsg) => {
@@ -339,12 +351,12 @@ export default function UserAppeals({ isActive }) {
     };
   }, [selectedId, isActive, accessToken, fetchBackendAppeals]);
 
-  // Scroll messages to bottom on update
+  // Scroll messages to bottom only when switching to a different appeal ticket
   useEffect(() => {
     if (bodyRef.current) {
       bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
     }
-  }, [selectedId, appeals]);
+  }, [selectedId]);
 
   const selected = appeals.find(a => a._id === selectedId) || null;
 
@@ -529,6 +541,11 @@ export default function UserAppeals({ isActive }) {
     };
 
     setReplyText('');
+    setTimeout(() => {
+      if (bodyRef.current) {
+        bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
+      }
+    }, 50);
 
     setAppeals(prev => prev.map(item => {
       if (item._id === selected._id) {
