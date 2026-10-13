@@ -53,6 +53,11 @@ export default function Messages({ role = "passenger", isActive }) {
     })
 
     socket.on('receive_message', (newMsg) => {
+      // Check if admin is currently near bottom before updating messages (preserve back-reading)
+      const wasNearBottom = bodyRef.current
+        ? (bodyRef.current.scrollHeight - bodyRef.current.scrollTop - bodyRef.current.clientHeight < 120)
+        : true;
+
       // Update the active chat if the message belongs to the selected ticket
       setMessages(prev => {
         if (prev.some(m => m._id === newMsg._id)) return prev
@@ -73,6 +78,15 @@ export default function Messages({ role = "passenger", isActive }) {
         
         return [...prev, newMsg]
       })
+
+      // Only scroll to bottom if admin was already at the bottom (not back-reading)
+      if (wasNearBottom) {
+        setTimeout(() => {
+          if (bodyRef.current) {
+            bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
+          }
+        }, 50);
+      }
     })
 
     socket.on('new_ticket', (ticket) => {
@@ -156,7 +170,6 @@ export default function Messages({ role = "passenger", isActive }) {
       }
     }
     loadMessages()
-    const msgInterval = setInterval(loadMessages, 2500)
 
     // Join the ticket's socket room so we receive real-time messages for it
     if (socketRef.current) {
@@ -165,18 +178,18 @@ export default function Messages({ role = "passenger", isActive }) {
 
     // Leave the room when switching to a different ticket
     return () => {
-      clearInterval(msgInterval)
       if (socketRef.current) {
         socketRef.current.emit('leave_ticket', { ticketId: selected._id })
       }
     }
   }, [selected?._id, isActive, accessToken])
 
+  // Scroll messages to bottom only when selecting a different ticket
   useEffect(() => {
     if (bodyRef.current) {
       bodyRef.current.scrollTop = bodyRef.current.scrollHeight
     }
-  }, [messages])
+  }, [selected?._id])
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0]
@@ -237,6 +250,11 @@ export default function Messages({ role = "passenger", isActive }) {
       createdAt: new Date().toISOString(),
     }
     setMessages(prev => [...prev, optimisticMsg])
+    setTimeout(() => {
+      if (bodyRef.current) {
+        bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
+      }
+    }, 50);
 
     try {
       let finalMediaUrl = undefined
