@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -98,60 +98,136 @@ export default function Reports({ isActive }) {
   const exportPDF = () => {
     const doc = new jsPDF();
     
-    // Header
+    // Header - Center aligned as per template
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(22);
-    doc.text("FINDER", 105, 20, { align: "center" });
+    doc.setFontSize(16);
+    doc.text("FINDER", 105, 24, { align: "center" });
     
-    doc.setFontSize(14);
-    doc.text("SYSTEM SUMMARY REPORT", 105, 30, { align: "center" });
+    doc.setFontSize(11);
+    doc.text("SYSTEM SUMMARY REPORT", 105, 32, { align: "center" });
     doc.setFont("helvetica", "normal");
-    doc.text("MV Gallego TODA", 105, 38, { align: "center" });
+    doc.text("MV Gallego TODA", 105, 39, { align: "center" });
 
     // Meta Info
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
-    doc.text("Report Period:", 14, 55);
+    doc.text("Report Period:", 20, 56);
     doc.setFont("helvetica", "normal");
-    doc.text(`${month} ${year}`, 45, 55);
+    doc.text(`${month} 1, ${year}`, 48, 56);
+    // Draw underline for Report Period start
+    const startPeriodWidth = doc.getTextWidth(`${month} 1, ${year}`);
+    doc.line(48, 57, 48 + Math.max(startPeriodWidth, 30), 57);
+
+    const toX = 48 + Math.max(startPeriodWidth, 30) + 4;
+    doc.setFont("helvetica", "bold");
+    doc.text("to", toX, 56);
+
+    // End date calculation
+    const monthNamesList = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+    const mIdx = monthNamesList.indexOf(month);
+    const lastDay = mIdx !== -1 ? new Date(parseInt(year), mIdx + 1, 0).getDate() : 30;
+    const endPeriodText = `${month} ${lastDay}, ${year}`;
+    
+    doc.setFont("helvetica", "normal");
+    const endPeriodX = toX + 9;
+    doc.text(endPeriodText, endPeriodX, 56);
+    const endPeriodWidth = doc.getTextWidth(endPeriodText);
+    doc.line(endPeriodX, 57, endPeriodX + Math.max(endPeriodWidth, 30), 57);
 
     doc.setFont("helvetica", "bold");
-    doc.text("Generated Date:", 14, 62);
+    doc.text("Generated Date:", 20, 64);
     doc.setFont("helvetica", "normal");
-    doc.text(new Date().toLocaleDateString('en-US'), 45, 62);
+    const generatedDateStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    doc.text(generatedDateStr, 52, 64);
+    const genDateWidth = doc.getTextWidth(generatedDateStr);
+    doc.line(52, 65, 52 + Math.max(genDateWidth, 30), 65);
 
-    // Table Data
+    // Table Data matching exact template
     const tableData = [
-      ["1.", "Total Bookings", stats.totalTrips || 0],
-      ["2.", "Completed Trips", stats.completedTrips || 0],
-      ["3.", "Cancelled Trips", stats.cancelledTrips || 0],
-      ["4.", "Registered Passengers", stats.registeredPassengers || 0],
-      ["5.", "Registered Driver", stats.registeredDrivers || 0],
-      ["6.", "Active Driver", stats.activeDrivers || 0],
-      ["7.", "Inactive Driver", stats.inactiveDrivers || 0]
+      ["1.", "Total Bookings", stats.totalTrips !== undefined ? stats.totalTrips : 0],
+      ["2.", "Completed Trips", stats.completedTrips !== undefined ? stats.completedTrips : 0],
+      ["3.", "Cancelled Trips", stats.cancelledTrips !== undefined ? stats.cancelledTrips : 0],
+      ["4.", "Registered Passengers", stats.registeredPassengers !== undefined ? stats.registeredPassengers : 0],
+      ["5.", "Registered Driver", stats.registeredDrivers !== undefined ? stats.registeredDrivers : 0],
+      ["6.", "Active Driver", stats.activeDrivers !== undefined ? stats.activeDrivers : 0],
+      ["7.", "Inactive Driver", stats.inactiveDrivers !== undefined ? stats.inactiveDrivers : 0]
     ];
 
-    doc.autoTable({
-      startY: 70,
+    autoTable(doc, {
+      startY: 74,
+      margin: { left: 20, right: 20 },
       head: [["No.", "Category", "Total"]],
       body: tableData,
-      theme: 'grid',
-      headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
-      styles: { fontSize: 10, cellPadding: 5 }
+      theme: 'plain',
+      styles: {
+        fontSize: 10,
+        cellPadding: 4,
+        textColor: [0, 0, 0],
+        lineColor: [180, 180, 180],
+        lineWidth: 0.2
+      },
+      headStyles: {
+        fontStyle: 'bold',
+        fillColor: [255, 255, 255],
+        textColor: [0, 0, 0],
+        lineColor: [180, 180, 180],
+        lineWidth: 0.2
+      },
+      columnStyles: {
+        0: { cellWidth: 15, halign: 'left' },
+        1: { halign: 'left' },
+        2: { cellWidth: 45, halign: 'left' }
+      },
+      tableLineColor: [180, 180, 180],
+      tableLineWidth: 0.2
     });
 
-    // Footer
-    const finalY = doc.lastAutoTable.finalY || 70;
+    // Footer - Generated by with underline
+    const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY : 140;
     doc.setFont("helvetica", "bold");
-    doc.text("Generated by:", 14, finalY + 20);
+    doc.setFontSize(10);
+    doc.text("Generated by:", 20, finalY + 24);
+    
     doc.setFont("helvetica", "normal");
     const adminName = user ? `${user.firstName} ${user.lastName}` : 'Admin';
-    doc.text(adminName, 42, finalY + 20);
-    // Draw underline
+    doc.text(adminName, 49, finalY + 24);
     const textWidth = doc.getTextWidth(adminName);
-    doc.line(42, finalY + 21, 42 + Math.max(textWidth, 40), finalY + 21);
+    doc.line(49, finalY + 25, 49 + Math.max(textWidth, 45), finalY + 25);
 
     doc.save(`System_Summary_Report_${month}_${year}.pdf`);
+  };
+
+  const exportCSV = () => {
+    const csvRows = [
+      ["FINDER"],
+      ["SYSTEM SUMMARY REPORT"],
+      ["MV Gallego TODA"],
+      [],
+      ["Report Period", `${month} ${year}`],
+      ["Generated Date", new Date().toLocaleDateString('en-US')],
+      ["Generated by", user ? `${user.firstName} ${user.lastName}` : 'Admin'],
+      [],
+      ["No.", "Category", "Total"],
+      ["1", "Total Bookings", stats.totalTrips || 0],
+      ["2", "Completed Trips", stats.completedTrips || 0],
+      ["3", "Cancelled Trips", stats.cancelledTrips || 0],
+      ["4", "Registered Passengers", stats.registeredPassengers || 0],
+      ["5", "Registered Driver", stats.registeredDrivers || 0],
+      ["6", "Active Driver", stats.activeDrivers || 0],
+      ["7", "Inactive Driver", stats.inactiveDrivers || 0]
+    ];
+
+    const csvContent = "data:text/csv;charset=utf-8," + csvRows.map(e => e.map(val => `"${val !== undefined ? val : ''}"`).join(",")).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `System_Summary_Report_${month}_${year}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -172,7 +248,7 @@ export default function Reports({ isActive }) {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Export PDF
           </button>
-          <button className="btn btn-primary" style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 20px', fontWeight:600 }}>
+          <button className="btn btn-primary" onClick={exportCSV} style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 20px', fontWeight:600 }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Export CSV
           </button>

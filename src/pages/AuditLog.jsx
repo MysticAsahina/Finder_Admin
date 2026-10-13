@@ -2,7 +2,7 @@ import { useEffect, useState, useContext, useRef } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { io } from 'socket.io-client';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -180,27 +180,52 @@ export default function AuditLog({ isActive }) {
 
       const doc = new jsPDF();
       
-      // Header
+      // Header - Center aligned as per template
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(22);
-      doc.text("FINDER", 105, 20, { align: "center" });
+      doc.setFontSize(16);
+      doc.text("FINDER", 105, 24, { align: "center" });
       
-      doc.setFontSize(14);
-      doc.text("SYSTEM ACTIVITY / AUDIT REPORT", 105, 30, { align: "center" });
+      doc.setFontSize(11);
+      doc.text("SYSTEM ACTIVITY / AUDIT REPORT", 105, 32, { align: "center" });
       doc.setFont("helvetica", "normal");
-      doc.text("MV Gallego TODA", 105, 38, { align: "center" });
+      doc.text("MV Gallego TODA", 105, 39, { align: "center" });
 
       // Meta Info
       doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
-      doc.text("Report Period:", 14, 55);
+      doc.text("Report Period:", 20, 56);
       doc.setFont("helvetica", "normal");
-      doc.text(`${exportMonth} ${exportYear}`, 42, 55);
+      doc.text(`${exportMonth} 1, ${exportYear}`, 48, 56);
+      // Draw underline for Report Period start
+      const startPeriodWidth = doc.getTextWidth(`${exportMonth} 1, ${exportYear}`);
+      doc.line(48, 57, 48 + Math.max(startPeriodWidth, 30), 57);
+
+      const toX = 48 + Math.max(startPeriodWidth, 30) + 4;
+      doc.setFont("helvetica", "bold");
+      doc.text("to", toX, 56);
+
+      // End date calculation
+      const monthNamesList = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+      ];
+      const mIdx = monthNamesList.indexOf(exportMonth);
+      const lastDay = mIdx !== -1 ? new Date(parseInt(exportYear), mIdx + 1, 0).getDate() : 30;
+      const endPeriodText = `${exportMonth} ${lastDay}, ${exportYear}`;
+      
+      doc.setFont("helvetica", "normal");
+      const endPeriodX = toX + 9;
+      doc.text(endPeriodText, endPeriodX, 56);
+      const endPeriodWidth = doc.getTextWidth(endPeriodText);
+      doc.line(endPeriodX, 57, endPeriodX + Math.max(endPeriodWidth, 30), 57);
 
       doc.setFont("helvetica", "bold");
-      doc.text("Generated Date:", 14, 62);
+      doc.text("Generated Date:", 20, 64);
       doc.setFont("helvetica", "normal");
-      doc.text(new Date().toLocaleDateString('en-US'), 45, 62);
+      const generatedDateStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      doc.text(generatedDateStr, 52, 64);
+      const genDateWidth = doc.getTextWidth(generatedDateStr);
+      doc.line(52, 65, 52 + Math.max(genDateWidth, 30), 65);
 
       // Table Data
       const tableData = exportLogs.map(log => {
@@ -214,13 +239,35 @@ export default function AuditLog({ isActive }) {
         ];
       });
 
-      doc.autoTable({
-        startY: 70,
+      autoTable(doc, {
+        startY: 74,
+        margin: { left: 20, right: 20 },
         head: [["Date", "Time", "User", "Role", "Action"]],
         body: tableData,
-        theme: 'grid',
-        headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
-        styles: { fontSize: 10, cellPadding: 5 }
+        theme: 'plain',
+        styles: {
+          fontSize: 9,
+          cellPadding: 3.5,
+          textColor: [0, 0, 0],
+          lineColor: [180, 180, 180],
+          lineWidth: 0.2
+        },
+        headStyles: {
+          fontStyle: 'bold',
+          fillColor: [255, 255, 255],
+          textColor: [0, 0, 0],
+          lineColor: [180, 180, 180],
+          lineWidth: 0.2
+        },
+        columnStyles: {
+          0: { cellWidth: 24 },
+          1: { cellWidth: 20 },
+          2: { cellWidth: 35 },
+          3: { cellWidth: 25 },
+          4: { halign: 'left' }
+        },
+        tableLineColor: [180, 180, 180],
+        tableLineWidth: 0.2
       });
 
       // Calculate summaries
@@ -228,27 +275,53 @@ export default function AuditLog({ isActive }) {
       const driverProcessed = exportLogs.filter(l => l.action === 'DRIVER_APPROVED' || l.action === 'DRIVER_REJECTED').length;
       const systemChanges = exportLogs.filter(l => l.action === 'CONFIG_UPDATED' || l.action === 'UPDATE_FARE_SETTINGS').length;
 
-      // Summary Section
-      let finalY = doc.lastAutoTable.finalY || 70;
+      // Summary Section - Matching template
+      let finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY : 140;
       doc.setFont("helvetica", "bold");
-      doc.text("SUMMARY", 14, finalY + 15);
+      doc.setFontSize(10);
+      doc.text("SUMMARY", 20, finalY + 14);
+
+      // Line 1: Total Activities, Driver Application Processed, System Changes
       doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
       
-      doc.text(`Total Activities: ${totalActivities}`, 14, finalY + 23);
-      doc.text(`Driver Application Processed: ${driverProcessed}`, 70, finalY + 23);
-      doc.text(`System Changes: ${systemChanges}`, 150, finalY + 23);
+      let curX = 20;
+      const totLabel = "Total Activities: ";
+      doc.text(totLabel, curX, finalY + 22);
+      curX += doc.getTextWidth(totLabel);
+      const totVal = `${totalActivities}`;
+      doc.text(totVal, curX, finalY + 22);
+      const totValWidth = Math.max(doc.getTextWidth(totVal), 16);
+      doc.line(curX, finalY + 23, curX + totValWidth, finalY + 23);
 
-      // Footer
+      curX += totValWidth + 12;
+      const drvLabel = "Driver Application Processed: ";
+      doc.text(drvLabel, curX, finalY + 22);
+      curX += doc.getTextWidth(drvLabel);
+      const drvVal = `${driverProcessed}`;
+      doc.text(drvVal, curX, finalY + 22);
+      const drvValWidth = Math.max(doc.getTextWidth(drvVal), 16);
+      doc.line(curX, finalY + 23, curX + drvValWidth, finalY + 23);
+
+      curX += drvValWidth + 12;
+      const sysLabel = "System Changes: ";
+      doc.text(sysLabel, curX, finalY + 22);
+      curX += doc.getTextWidth(sysLabel);
+      const sysVal = `${systemChanges}`;
+      doc.text(sysVal, curX, finalY + 22);
+      const sysValWidth = Math.max(doc.getTextWidth(sysVal), 16);
+      doc.line(curX, finalY + 23, curX + sysValWidth, finalY + 23);
+
+      // Footer - Generated by with underline
       doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
-      doc.text("Generated by:", 14, finalY + 45);
+      doc.text("Generated by:", 20, finalY + 38);
+      
       doc.setFont("helvetica", "normal");
       const adminName = user ? `${user.firstName} ${user.lastName}` : 'Admin';
-      doc.text(adminName, 42, finalY + 45);
-      
+      doc.text(adminName, 49, finalY + 38);
       const textWidth = doc.getTextWidth(adminName);
-      doc.line(42, finalY + 46, 42 + Math.max(textWidth, 40), finalY + 46);
+      doc.line(49, finalY + 39, 49 + Math.max(textWidth, 45), finalY + 39);
 
       doc.save(`Audit_Report_${exportMonth}_${exportYear}.pdf`);
       setIsModalOpen(false);
