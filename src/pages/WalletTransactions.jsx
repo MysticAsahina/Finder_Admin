@@ -35,6 +35,20 @@ export default function WalletTransactions({ isActive }) {
   // Receipt modal state
   const [selectedTx, setSelectedTx] = useState(null);
 
+  // Export CSV Modal state
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const currentMonthName = new Date().toLocaleString('default', { month: 'long' });
+  const currentYear = new Date().getFullYear();
+  const [exportMonth, setExportMonth] = useState(currentMonthName);
+  const [exportYear, setExportYear] = useState(currentYear.toString());
+  const [exporting, setExporting] = useState(false);
+
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  const years = Array.from({ length: 5 }, (_, i) => (currentYear - i).toString());
+
   const fetchData = useCallback(async (showLoading = true) => {
     if (!accessToken) return;
     try {
@@ -162,34 +176,51 @@ export default function WalletTransactions({ isActive }) {
   };
 
   // Export CSV
-  const handleExportCSV = () => {
-    if (filteredTransactions.length === 0) {
-      Swal.fire('No Data', 'No transactions to export for the current filters.', 'info');
-      return;
+  const handleGenerateCSV = async () => {
+    try {
+      setExporting(true);
+      const res = await fetch(`${API_URL}/admin/wallet/transactions?month=${exportMonth}&year=${exportYear}&limit=5000`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const data = await res.json();
+      const exportList = data.transactions || [];
+
+      if (exportList.length === 0) {
+        Swal.fire('No Data', `No transactions found for ${exportMonth} ${exportYear}.`, 'info');
+        setExporting(false);
+        return;
+      }
+
+      const headers = ['Reference Number', 'Name', 'Phone', 'Role', 'Type', 'Amount (PHP)', 'Fee (PHP)', 'Status', 'Date', 'Description'];
+      const rows = exportList.map(tx => [
+        tx.referenceNumber,
+        tx.userId ? `"${tx.userId.firstName} ${tx.userId.lastName}"` : '"System User"',
+        tx.userId?.mobileNumber || '',
+        tx.userRole,
+        tx.type,
+        tx.amount,
+        tx.fee || 0,
+        tx.status,
+        new Date(tx.createdAt).toLocaleString('en-US'),
+        `"${(tx.description || '').replace(/"/g, '""')}"`
+      ]);
+
+      const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `Wallet_Transactions_${exportMonth}_${exportYear}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setIsExportModalOpen(false);
+    } catch (err) {
+      console.error('Failed to export CSV', err);
+      Swal.fire('Error', 'Failed to generate transactions CSV.', 'error');
+    } finally {
+      setExporting(false);
     }
-
-    const headers = ['Reference Number', 'Name', 'Phone', 'Role', 'Type', 'Amount (PHP)', 'Fee (PHP)', 'Status', 'Date', 'Description'];
-    const rows = filteredTransactions.map(tx => [
-      tx.referenceNumber,
-      tx.userId ? `"${tx.userId.firstName} ${tx.userId.lastName}"` : '"System User"',
-      tx.userId?.mobileNumber || '',
-      tx.userRole,
-      tx.type,
-      tx.amount,
-      tx.fee || 0,
-      tx.status,
-      new Date(tx.createdAt).toISOString(),
-      `"${(tx.description || '').replace(/"/g, '""')}"`
-    ]);
-
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Finder_Wallet_Ledger_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   return (
@@ -211,11 +242,11 @@ export default function WalletTransactions({ isActive }) {
 
           <button
             className="btn btn-outline"
-            onClick={handleExportCSV}
-            title="Download current ledger as CSV"
+            onClick={() => setIsExportModalOpen(true)}
+            title="Export wallet ledger as CSV"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ marginRight: 6 }}>
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
@@ -803,6 +834,35 @@ export default function WalletTransactions({ isActive }) {
                 onClick={() => setSelectedTx(null)}
               >
                 Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Export CSV Modal ── */}
+      {isExportModalOpen && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999
+        }}>
+          <div style={{ background: 'var(--bg)', padding: '24px', borderRadius: '8px', width: '320px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '16px' }}>Export Wallet Transactions</h3>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-light)', marginBottom: '16px' }}>Select the month to generate the CSV ledger for.</p>
+            
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
+              <select className="filter-select" style={{ flex: 1 }} value={exportMonth} onChange={e => setExportMonth(e.target.value)}>
+                {monthNames.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+              <select className="filter-select" style={{ flex: 1 }} value={exportYear} onChange={e => setExportYear(e.target.value)}>
+                {years.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button className="btn btn-outline" onClick={() => setIsExportModalOpen(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleGenerateCSV} disabled={exporting}>
+                {exporting ? 'Exporting...' : 'Generate CSV'}
               </button>
             </div>
           </div>
