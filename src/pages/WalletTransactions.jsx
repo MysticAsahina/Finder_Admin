@@ -192,27 +192,36 @@ export default function WalletTransactions({ isActive }) {
       }
 
       const headers = ['Reference Number', 'Name', 'Phone', 'Role', 'Type', 'Amount (PHP)', 'Fee (PHP)', 'Status', 'Date', 'Description'];
+      
+      const escapeCsvCell = (val) => {
+        if (val === null || val === undefined) return '""';
+        const str = String(val).replace(/"/g, '""').replace(/[\r\n]+/g, ' ');
+        return `"${str}"`;
+      };
+
       const rows = exportList.map(tx => [
-        tx.referenceNumber,
-        tx.userId ? `"${tx.userId.firstName} ${tx.userId.lastName}"` : '"System User"',
-        tx.userId?.mobileNumber || '',
-        tx.userRole,
-        tx.type,
-        tx.amount,
-        tx.fee || 0,
-        tx.status,
-        new Date(tx.createdAt).toLocaleString('en-US'),
-        `"${(tx.description || '').replace(/"/g, '""')}"`
+        escapeCsvCell(tx.referenceNumber),
+        escapeCsvCell(tx.userId ? `${tx.userId.firstName || ''} ${tx.userId.lastName || ''}`.trim() : 'System User'),
+        escapeCsvCell(tx.userId?.mobileNumber || ''),
+        escapeCsvCell(tx.userRole || ''),
+        escapeCsvCell(tx.type || ''),
+        escapeCsvCell(tx.amount !== undefined ? tx.amount : 0),
+        escapeCsvCell(tx.fee !== undefined ? tx.fee : 0),
+        escapeCsvCell(tx.status || ''),
+        escapeCsvCell(new Date(tx.createdAt).toLocaleString('en-US')),
+        escapeCsvCell(tx.description || '')
       ]);
 
-      const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-      const encodedUri = encodeURI(csvContent);
+      const csvString = '\uFEFF' + [headers.map(escapeCsvCell).join(','), ...rows.map(r => r.join(','))].join('\r\n');
+      const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.setAttribute('href', encodedUri);
+      link.setAttribute('href', url);
       link.setAttribute('download', `Wallet_Transactions_${exportMonth}_${exportYear}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(url);
 
       setIsExportModalOpen(false);
     } catch (err) {
