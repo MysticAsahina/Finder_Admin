@@ -24,11 +24,14 @@ function validateMobile(mobileNumber) {
     return null;
 }
 
-const MAX_PASSWORD_LENGTH = 128
-
 function validatePassword(password) {
     if (!password) return 'Password is required.';
-    if (password.length > MAX_PASSWORD_LENGTH) return 'Password is too long.';
+    if (password.length < 8) return 'Password must be at least 8 characters.';
+    if (password.length > 128) return 'Password is too long.';
+    if (!/(?=.*[a-z])/.test(password)) return 'Password must contain at least one lowercase letter.';
+    if (!/(?=.*[A-Z])/.test(password)) return 'Password must contain at least one uppercase letter.';
+    if (!/(?=.*\d)/.test(password)) return 'Password must contain at least one number.';
+    if (!/(?=.*[^A-Za-z0-9])/.test(password)) return 'Password must contain at least one special character.';
     return null;
 }
 
@@ -266,6 +269,150 @@ export default function Settings() {
             setSaving(false);
         }
     };
+
+    const handleChangePassword = async () => {
+        const { value: formValues } = await styledSwal.fire({
+            title: 'Change Password',
+            html: `
+                <div style="text-align: left; display: flex; flex-direction: column; gap: 14px; margin-top: 10px;">
+                    <div>
+                        <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 6px;">Current Password</label>
+                        <input id="swal-current-password" type="password" class="swal2-input" placeholder="Enter current password" style="margin: 0; width: 100%; box-sizing: border-box; font-size: 0.95rem;" autocomplete="current-password" />
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 6px;">New Password</label>
+                        <input id="swal-new-password" type="password" class="swal2-input" placeholder="Enter new password" style="margin: 0; width: 100%; box-sizing: border-box; font-size: 0.95rem;" autocomplete="new-password" />
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 6px;">Confirm New Password</label>
+                        <input id="swal-confirm-password" type="password" class="swal2-input" placeholder="Confirm new password" style="margin: 0; width: 100%; box-sizing: border-box; font-size: 0.95rem;" autocomplete="new-password" />
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--muted); line-height: 1.4; background: var(--bg); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-l);">
+                        Password must be 8-128 characters and include uppercase, lowercase, number, and special character.
+                    </div>
+                </div>
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'Next',
+            cancelButtonText: 'Cancel',
+            didOpen: () => {
+                const input = document.getElementById('swal-current-password');
+                if (input) input.focus();
+            },
+            preConfirm: () => {
+                const currentPassword = document.getElementById('swal-current-password')?.value || '';
+                const newPassword = document.getElementById('swal-new-password')?.value || '';
+                const confirmPassword = document.getElementById('swal-confirm-password')?.value || '';
+
+                if (!currentPassword) {
+                    styledSwal.showValidationMessage('Current password is required.');
+                    return false;
+                }
+                if (!newPassword) {
+                    styledSwal.showValidationMessage('New password is required.');
+                    return false;
+                }
+                if (newPassword !== confirmPassword) {
+                    styledSwal.showValidationMessage('New passwords do not match.');
+                    return false;
+                }
+                if (newPassword === currentPassword) {
+                    styledSwal.showValidationMessage('New password cannot be the same as your current password.');
+                    return false;
+                }
+                const policyErr = validatePassword(newPassword);
+                if (policyErr) {
+                    styledSwal.showValidationMessage(policyErr);
+                    return false;
+                }
+                return { currentPassword, newPassword };
+            }
+        });
+
+        if (!formValues) return;
+
+        try {
+            styledSwal.fire({
+                title: 'Sending OTP...',
+                text: 'Sending verification code to your email.',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    styledSwal.showLoading();
+                }
+            });
+
+            const res = await fetch(`${API_URL}/admin/edit-profile/change-password`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({
+                    currentPassword: formValues.currentPassword,
+                    newPassword: formValues.newPassword,
+                }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                styledSwal.fire('Error', data.message || 'Failed to initiate password change.', 'error');
+                return;
+            }
+
+            const { value: otpCode } = await styledSwal.fire({
+                title: 'Verification Required',
+                text: data.message || 'An OTP has been sent to your registered email address to verify this password change.',
+                input: 'text',
+                inputPlaceholder: 'Enter 6-digit OTP',
+                inputAttributes: {
+                    maxlength: 6,
+                    inputmode: 'numeric',
+                    pattern: '[0-9]*'
+                },
+                showCancelButton: true,
+                confirmButtonText: 'Verify & Change Password',
+                cancelButtonText: 'Cancel',
+                preConfirm: (code) => {
+                    if (!code || !/^\d{6}$/.test(code.trim())) {
+                        styledSwal.showValidationMessage('Please enter a valid 6-digit OTP.');
+                        return false;
+                    }
+                    return code.trim();
+                }
+            });
+
+            if (!otpCode) return;
+
+            styledSwal.fire({
+                title: 'Updating Password...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    styledSwal.showLoading();
+                }
+            });
+
+            const verifyRes = await fetch(`${API_URL}/admin/edit-profile/verify-password-change`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({ code: otpCode }),
+            });
+
+            const verifyData = await verifyRes.json();
+            if (!verifyRes.ok) {
+                styledSwal.fire('Error', verifyData.message || 'Invalid or expired OTP.', 'error');
+                return;
+            }
+
+            styledSwal.fire('Success', verifyData.message || 'Password changed successfully.', 'success');
+        } catch (err) {
+            styledSwal.fire('Error', 'Unable to reach the server. Please check your connection.', 'error');
+            console.error(err);
+        }
+    };
   
   // --- Settings toggles backed by localStorage ---
   const getStoredToggle = (key, fallback) => {
@@ -384,6 +531,20 @@ export default function Settings() {
         {settingsToggleRow('Two-Factor Authentication', 'Require MPIN on every admin login', true, () => {}, true)}
         <div style={{ borderTop:'1px solid var(--border-l)' }}>
           {settingsToggleRow('Session Timeout', 'Auto-logout after 30 minutes of inactivity', sessionTimeout, handleToggle('setting_sessionTimeout', setSessionTimeout))}
+        </div>
+        <div style={{ borderTop:'1px solid var(--border-l)', padding:'14px 0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          <div>
+            <div className="toggle-name">Admin Password</div>
+            <div className="toggle-desc">Change password with email OTP verification</div>
+          </div>
+          <button
+            type="button"
+            className="btn btn-outline"
+            style={{ padding:'6px 16px', borderRadius:8, fontSize:'0.85rem' }}
+            onClick={handleChangePassword}
+          >
+            Change Password
+          </button>
         </div>
       </div>
 
