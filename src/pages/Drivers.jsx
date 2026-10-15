@@ -226,33 +226,30 @@ export default function Drivers({ isActive }) {
     if (actionType === 'Clear Flag') {
       backendAction = 'clear';
     } else if (actionType === 'Temporary Suspension') {
-      const { value: formValues, isConfirmed } = await Swal.fire({
-        title: 'Temporary Suspension',
+      const { value: reason, isConfirmed } = await Swal.fire({
+        title: 'Temporary Suspension (3 Days)',
         html: `
-          <p style="margin-bottom: 10px; font-size: 14px; color: #555; text-align: left;">Enter suspension duration (min 3, max 30 days):</p>
-          <input id="swal-input1" type="number" min="3" max="30" class="swal2-input" placeholder="Duration (days)" style="margin-bottom: 15px;">
-          <p style="margin-bottom: 10px; font-size: 14px; color: #555; text-align: left;">Reason for suspension:</p>
-          <textarea id="swal-input2" class="swal2-textarea" placeholder="Enter reason here..." rows="3"></textarea>
+          <p style="margin-bottom: 12px; font-size: 14px; color: #555; text-align: left;">
+            This account will be temporarily suspended for a fixed duration of <strong>3 days</strong>.
+          </p>
+          <p style="margin-bottom: 8px; font-size: 14px; color: #555; text-align: left;">Reason for suspension:</p>
+          <textarea id="swal-input-reason" class="swal2-textarea" placeholder="Enter reason here..." rows="3" style="width: 100%; box-sizing: border-box;"></textarea>
         `,
         focusConfirm: false,
         showCancelButton: true,
+        confirmButtonText: 'Suspend for 3 Days',
         preConfirm: () => {
-          const days = document.getElementById('swal-input1').value;
-          const reason = document.getElementById('swal-input2').value;
-          if (!days || days < 3 || days > 30) {
-            Swal.showValidationMessage('Please enter a valid number between 3 and 30');
-            return false;
-          }
-          if (!reason.trim()) {
+          const r = document.getElementById('swal-input-reason').value;
+          if (!r || !r.trim()) {
             Swal.showValidationMessage('Please enter a reason');
             return false;
           }
-          return { days, reason: reason.trim() };
+          return r.trim();
         }
       });
-      if (!isConfirmed || !formValues) return;
+      if (!isConfirmed || !reason) return;
       backendAction = 'temp_suspend';
-      payload = { durationDays: parseInt(formValues.days), reason: formValues.reason };
+      payload = { durationDays: 3, reason: reason };
     } else if (actionType === 'Suspend Until Resolved') {
       const { value: reason, isConfirmed } = await Swal.fire({
         title: 'Suspend Until Resolved',
@@ -394,7 +391,9 @@ export default function Drivers({ isActive }) {
   // Flagged accounts filtering
   const filteredFlagged = flaggedAccounts.filter(acc => {
     const matchRole = flaggedRoleFilter === 'All' || acc.role.toLowerCase() === flaggedRoleFilter.toLowerCase();
-    const matchReason = flaggedReasonFilter === 'All' || acc.reason.toLowerCase() === flaggedReasonFilter.toLowerCase();
+    const matchReason = flaggedReasonFilter === 'All' || 
+      (acc.reason && acc.reason.toLowerCase().includes(flaggedReasonFilter.toLowerCase())) ||
+      (acc.reason && flaggedReasonFilter.toLowerCase().includes(acc.reason.toLowerCase()));
     return matchRole && matchReason;
   });
 
@@ -451,10 +450,10 @@ export default function Drivers({ isActive }) {
               }}
             >
               <option value="All">All Reasons</option>
-              <option value="Reported 3 consecutive times in 1 day">Reported 3 consecutive times in 1 day</option>
+              <option value="Multiple Trip Reports">Multiple Trip Reports (5 Reports)</option>
               <option value="Frequent Cancellation">Frequent Cancellation</option>
-              <option value="Unresponsive Passenger">Unresponsive Passenger</option>
-              <option value="Unresponsive Driver">Unresponsive Driver</option>
+              <option value="No-show Pattern">No-show Pattern</option>
+              <option value="Unresponsive">Unresponsive</option>
               <option value="Policy Violation (Outside Hailing)">Policy Violation (Outside Hailing)</option>
               <option value="Late Arrival">Late Arrival</option>
             </select>
