@@ -1369,6 +1369,8 @@ const styles = {
     borderRadius: '20px',
     width: '100%',
     maxWidth: '650px',
+    maxHeight: '90vh',
+    overflowY: 'auto',
     padding: '24px',
     boxShadow: '0 20px 48px rgba(0, 0, 0, 0.16)',
     display: 'flex',

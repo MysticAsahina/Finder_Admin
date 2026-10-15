@@ -451,7 +451,8 @@ export default function Messages({ role = "passenger", isActive }) {
             fontSize: '0.82rem',
             display: 'flex',
             flexDirection: 'column',
-            gap: '8px'
+            gap: '8px',
+            flexShrink: 0
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700', color: 'var(--text)' }}>
@@ -506,27 +507,43 @@ export default function Messages({ role = "passenger", isActive }) {
         )}
 
         <div className="msg-body" ref={bodyRef}>
-          {messages.map(msg => (
-            <div
-              key={msg._id}
-              className={`msg-wrapper ${msg.senderRole === 'admin' ? 'out' : 'in'}`}
-            >
-              <div className={`bubble ${msg.senderRole === 'admin' ? 'out' : 'in'}`} style={{ whiteSpace: 'pre-wrap' }}>
-                {msg.body && <div style={{ marginBottom: msg.mediaUrl ? 6 : 0 }}>{msg.body}</div>}
-                {msg.mediaUrl && msg.mediaType === 'image' && (
-                  <img src={msg.mediaUrl} onClick={() => setPreviewImage(msg.mediaUrl)} alt="attachment" />
-                )}
-                {msg.mediaUrl && msg.mediaType === 'video' && (
-                  <video src={msg.mediaUrl} controls />
-                )}
-              </div>
-              <div className={`bubble-time ${msg.senderRole === 'admin' ? 'out-time' : ''}`}>
-                {new Date(msg.createdAt).toLocaleTimeString('en-US', {
-                  hour: '2-digit', minute: '2-digit', hour12: true
-                })}
+          {!selected ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--muted)', gap: 10, padding: 20, textAlign: 'center' }}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.35 }}>
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+              <div style={{ fontSize: '0.92rem', fontWeight: 600, color: 'var(--text)' }}>No conversation selected</div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--subtle)', maxWidth: 260 }}>
+                Select an inquiry from the list on the left to review messages and reply.
               </div>
             </div>
-          ))}
+          ) : messages.length === 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--muted)', gap: 8, padding: 20 }}>
+              <span style={{ fontSize: '0.85rem' }}>No messages in this ticket yet.</span>
+            </div>
+          ) : (
+            messages.map(msg => (
+              <div
+                key={msg._id}
+                className={`msg-wrapper ${msg.senderRole === 'admin' ? 'out' : 'in'}`}
+              >
+                <div className={`bubble ${msg.senderRole === 'admin' ? 'out' : 'in'}`} style={{ whiteSpace: 'pre-wrap' }}>
+                  {msg.body && <div style={{ marginBottom: msg.mediaUrl ? 6 : 0 }}>{msg.body}</div>}
+                  {msg.mediaUrl && msg.mediaType === 'image' && (
+                    <img src={msg.mediaUrl} onClick={() => setPreviewImage(msg.mediaUrl)} alt="attachment" />
+                  )}
+                  {msg.mediaUrl && msg.mediaType === 'video' && (
+                    <video src={msg.mediaUrl} controls />
+                  )}
+                </div>
+                <div className={`bubble-time ${msg.senderRole === 'admin' ? 'out-time' : ''}`}>
+                  {new Date(msg.createdAt).toLocaleTimeString('en-US', {
+                    hour: '2-digit', minute: '2-digit', hour12: true
+                  })}
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
         {selected ? (
