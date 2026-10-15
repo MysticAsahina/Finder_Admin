@@ -170,34 +170,13 @@ export default function Drivers({ isActive }) {
         .then(r => r.json())
         .then(data => {
           if (!cancelled) {
-            let list = Array.isArray(data) ? [...data] : [];
-            try {
-              const autoFlaggedRaw = localStorage.getItem('finder_auto_flagged_accounts_v1');
-              if (autoFlaggedRaw) {
-                const autoList = JSON.parse(autoFlaggedRaw);
-                if (Array.isArray(autoList)) {
-                  autoList.forEach(autoAcc => {
-                    if (!list.some(item => item.id === autoAcc.id || item.userId === autoAcc.userId)) {
-                      list.unshift(autoAcc);
-                    }
-                  });
-                }
-              }
-            } catch (e) {}
-            setFlaggedAccounts(list);
+            setFlaggedAccounts(Array.isArray(data) ? data : []);
           }
         })
         .catch(err => {
           console.error(err);
           if (!cancelled) {
-            let fallbackList = [];
-            try {
-              const autoFlaggedRaw = localStorage.getItem('finder_auto_flagged_accounts_v1');
-              if (autoFlaggedRaw) {
-                fallbackList = JSON.parse(autoFlaggedRaw) || [];
-              }
-            } catch (e) {}
-            setFlaggedAccounts(fallbackList);
+            setFlaggedAccounts([]);
           }
         });
 
@@ -306,15 +285,6 @@ export default function Drivers({ isActive }) {
       if (!res.ok) {
         throw new Error('Action failed');
       }
-
-      try {
-        const autoFlaggedRaw = localStorage.getItem('finder_auto_flagged_accounts_v1');
-        if (autoFlaggedRaw) {
-          const autoList = JSON.parse(autoFlaggedRaw);
-          const filtered = autoList.filter(a => a.id !== account.id && a.userId !== account.userId);
-          localStorage.setItem('finder_auto_flagged_accounts_v1', JSON.stringify(filtered));
-        }
-      } catch (e) {}
 
       if (actionType === 'Clear Flag') {
         setFlaggedAccounts(prev => prev.filter(a => a.id !== account.id));
