@@ -563,9 +563,13 @@ tbody tr:hover{background:var(--brand-ll);}
 .login-field{margin-bottom:20px;}
 .login-label{display:block;font-size:0.75rem;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:0.02em;margin-bottom:8px;}
 .login-input-wrap{position:relative;}
-.login-input-wrap svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:18px;height:18px;stroke:var(--subtle);}
+.login-input-wrap > svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:18px;height:18px;stroke:var(--subtle);pointer-events:none;}
 .login-input{width:100%;padding:14px 14px 14px 44px;background:var(--bg);border:1.5px solid transparent;border-radius:12px;font-size:0.92rem;color:var(--text);transition:all 0.2s;font-family:inherit;}
+.login-input.with-action{padding-right:44px;}
 .login-input:focus{border-color:var(--brand);background:white;outline:none;}
+.login-password-toggle{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;color:var(--subtle);transition:color 0.2s;}
+.login-password-toggle:hover{color:var(--text);}
+.login-password-toggle svg{position:static;transform:none;width:18px;height:18px;stroke:currentColor;display:block;}
 
 .login-options{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;font-size:0.8rem;font-weight:600;}
 .remember-me{display:flex;align-items:center;gap:8px;color:var(--text);cursor:pointer;text-transform:uppercase;}
