@@ -359,11 +359,12 @@ export default function Messages({ role = "passenger", isActive }) {
     if (ticket.userId?.firstName) {
       return `${ticket.userId.firstName} ${ticket.userId.lastName}`
     }
-    return 'Unknown User'
+    const roleCapitalized = ticket.userRole ? ticket.userRole.charAt(0).toUpperCase() + ticket.userRole.slice(1) : 'User'
+    return `[Deleted Account] (${roleCapitalized})`
   }
 
   const getTicketRole = (ticket) => {
-    return ticket.userId?.role || 'user'
+    return ticket.userId?.role || ticket.userRole || 'user'
   }
 
   const filteredTickets = tickets.filter(t => {
@@ -547,7 +548,13 @@ export default function Messages({ role = "passenger", isActive }) {
         </div>
 
         {selected ? (
-          selected.status === 'open' ? (
+          (!selected.userId || !selected.userId.firstName) ? (
+            <div className="msg-input-bar" style={{ justifyContent: 'center' }}>
+              <span style={{ color: 'var(--subtle, #888)', fontStyle: 'italic', fontSize: '0.88rem' }}>
+                This user has deleted their account. Further replies cannot be delivered.
+              </span>
+            </div>
+          ) : selected.status === 'open' ? (
             <div style={{ display: 'flex', flexDirection: 'column', borderTop: '1.5px solid var(--border-l)' }}>
               {pendingMedia && (
                 <div className="msg-pending-media">
