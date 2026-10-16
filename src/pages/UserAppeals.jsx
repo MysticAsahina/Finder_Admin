@@ -185,14 +185,8 @@ const DEFAULT_APPEALS = [
 ];
 
 export default function UserAppeals({ isActive }) {
-  const { accessToken, user } = useContext(AuthContext)
-  const [appeals, setAppeals] = useState(() => {
-    try {
-      const saved = localStorage.getItem('finder_admin_appeals');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {}
-    return DEFAULT_APPEALS;
-  });
+  const { accessToken, user } = useContext(AuthContext);
+  const [appeals, setAppeals] = useState(DEFAULT_APPEALS);
 
   const [selectedId, setSelectedId] = useState(() => DEFAULT_APPEALS[0]._id);
   const [roleFilter, setRoleFilter] = useState('all'); // 'all' | 'passenger' | 'driver'
@@ -203,12 +197,12 @@ export default function UserAppeals({ isActive }) {
   const bodyRef = useRef(null)
   const socketRef = useRef(null)
 
-  // Persist appeals in localStorage
+  // Remove preexisting unencrypted localStorage cache if present
   useEffect(() => {
     try {
-      localStorage.setItem('finder_admin_appeals', JSON.stringify(appeals));
+      localStorage.removeItem('finder_admin_appeals');
     } catch (e) {}
-  }, [appeals]);
+  }, []);
 
   const fetchBackendAppeals = useCallback(async () => {
     if (!accessToken) return;
