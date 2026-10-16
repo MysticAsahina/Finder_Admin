@@ -16,6 +16,16 @@ const styledSwal = Swal.mixin({
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
+const escapeHtml = (str) => {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+};
+
 const isVideoMedia = (url, mediaType) => {
   if (mediaType === 'video') return true;
   if (!url || typeof url !== 'string') return false;
@@ -396,7 +406,7 @@ export default function UserAppeals({ isActive }) {
         <div style="text-align: left; font-size: 0.9rem; line-height: 1.5; color: #444;">
           <p>Are you sure you want to <strong>approve this appeal</strong> and lift the suspension for:</p>
           <div style="background: var(--bg2); padding: 10px 14px; border-radius: 8px; margin: 10px 0; font-weight: 600;">
-            ${selected.userName} (${selected.userRole.toUpperCase()})
+            ${escapeHtml(selected.userName)} (${escapeHtml(selected.userRole.toUpperCase())})
           </div>
           <p style="color: #16a34a; font-weight: 500;">✓ The user's account will be immediately restored to active status.</p>
         </div>
@@ -417,40 +427,60 @@ export default function UserAppeals({ isActive }) {
         createdAt: new Date().toISOString()
       };
 
-      // Try backend call
       try {
-        await fetch(`${API_URL}/admin/suspended-accounts/${selected.userId}/lift`, {
+        const res = await fetch(`${API_URL}/admin/appeals/${selected._id}/lift`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          styledSwal.fire({
+            title: 'Action Failed',
+            text: errData.message || 'Failed to lift suspension. Please try again.',
+            icon: 'error'
+          });
+          return;
+        }
+
+        // Also lift in suspended-accounts if present (non-blocking)
+        fetch(`${API_URL}/admin/suspended-accounts/${selected.userId}/lift`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${accessToken}` }
         }).catch(() => {});
 
-        await fetch(`${API_URL}/admin/appeals/${selected._id}/lift`, {
-          method: 'PATCH',
-          headers: { 'Authorization': `Bearer ${accessToken}` }
-        }).catch(() => {});
-      } catch (e) {}
+        // Update state on success
+        setAppeals(prev => prev.map(item => {
+          if (item._id === selected._id) {
+            return {
+              ...item,
+              status: 'lifted',
+              hasUnreadAdmin: false,
+              updatedAt: new Date().toISOString(),
+              messages: [...(item.messages || []), sysMessage]
+            };
+          }
+          return item;
+        }));
 
-      // Update state
-      setAppeals(prev => prev.map(item => {
-        if (item._id === selected._id) {
-          return {
-            ...item,
-            status: 'lifted',
-            hasUnreadAdmin: false,
-            updatedAt: new Date().toISOString(),
-            messages: [...(item.messages || []), sysMessage]
-          };
-        }
-        return item;
-      }));
-
-      styledSwal.fire({
-        title: 'Suspension Lifted!',
-        text: `${selected.userName}'s appeal was approved and the suspension has been lifted.`,
-        icon: 'success',
-        timer: 2400,
-        showConfirmButton: false
-      });
+        styledSwal.fire({
+          title: 'Suspension Lifted!',
+          text: `${selected.userName}'s appeal was approved and the suspension has been lifted.`,
+          icon: 'success',
+          timer: 2400,
+          showConfirmButton: false
+        });
+      } catch (err) {
+        console.error('Failed to lift suspension:', err);
+        styledSwal.fire({
+          title: 'Network Error',
+          text: 'Unable to connect to server. Please check your network connection.',
+          icon: 'error'
+        });
+      }
     });
   };
 
@@ -464,7 +494,7 @@ export default function UserAppeals({ isActive }) {
         <div style="text-align: left; font-size: 0.9rem; line-height: 1.5; color: #444;">
           <p>Are you sure you want to <strong>deny this appeal</strong> for:</p>
           <div style="background: #fef2f2; border: 1px solid #fecaca; padding: 10px 14px; border-radius: 8px; margin: 10px 0; font-weight: 600; color: #dc2626;">
-            ${selected.userName} (${selected.userRole.toUpperCase()})
+            ${escapeHtml(selected.userName)} (${escapeHtml(selected.userRole.toUpperCase())})
           </div>
           <p style="color: #64748b; font-size: 0.85rem;">The appeal will be marked as denied. The user's account remains in the system and their suspension remains active according to policy.</p>
         </div>
@@ -489,39 +519,55 @@ export default function UserAppeals({ isActive }) {
         createdAt: new Date().toISOString()
       };
 
-      // Try backend call
       try {
-        await fetch(`${API_URL}/admin/appeals/${selected._id}/disable`, {
+        const res = await fetch(`${API_URL}/admin/appeals/${selected._id}/disable`, {
           method: 'PATCH',
           headers: {
             'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({ reason: result.value })
-        }).catch(() => {});
-      } catch (e) {}
+        });
 
-      // Update state
-      setAppeals(prev => prev.map(item => {
-        if (item._id === selected._id) {
-          return {
-            ...item,
-            status: 'disabled',
-            hasUnreadAdmin: false,
-            updatedAt: new Date().toISOString(),
-            messages: [...(item.messages || []), sysMessage]
-          };
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          styledSwal.fire({
+            title: 'Action Failed',
+            text: errData.message || 'Failed to deny appeal. Please try again.',
+            icon: 'error'
+          });
+          return;
         }
-        return item;
-      }));
 
-      styledSwal.fire({
-        title: 'Appeal Denied',
-        text: `${selected.userName}'s appeal has been denied. The suspension remains active.`,
-        icon: 'error',
-        timer: 2400,
-        showConfirmButton: false
-      });
+        // Update state on success
+        setAppeals(prev => prev.map(item => {
+          if (item._id === selected._id) {
+            return {
+              ...item,
+              status: 'disabled',
+              hasUnreadAdmin: false,
+              updatedAt: new Date().toISOString(),
+              messages: [...(item.messages || []), sysMessage]
+            };
+          }
+          return item;
+        }));
+
+        styledSwal.fire({
+          title: 'Appeal Denied',
+          text: `${selected.userName}'s appeal has been denied. The suspension remains active.`,
+          icon: 'error',
+          timer: 2400,
+          showConfirmButton: false
+        });
+      } catch (err) {
+        console.error('Failed to deny appeal:', err);
+        styledSwal.fire({
+          title: 'Network Error',
+          text: 'Unable to connect to server. Please check your network connection.',
+          icon: 'error'
+        });
+      }
     });
   };
 
@@ -593,7 +639,7 @@ export default function UserAppeals({ isActive }) {
     } catch (e) {}
   };
 
-    // Two-step Re-evaluation confirmation: Type "DELETE" + Email OTP verification
+  // Two-step Re-evaluation confirmation: Type "CONFIRM" + Backend Email OTP verification
   const handleReopenAppeal = async () => {
     if (!selected) return;
 
@@ -605,7 +651,7 @@ export default function UserAppeals({ isActive }) {
       html: `
         <div style="text-align: left; font-size: 0.88rem; line-height: 1.5; color: #444;">
           <p style="margin-bottom: 8px;">
-            Re-evaluating will <strong>reset the current resolution</strong> (${selected.status === 'lifted' ? 'Suspension Lifted' : 'Appeal Denied'}) for <strong>${selected.userName}</strong> and return this case to <strong>Pending Review</strong>.
+            Re-evaluating will <strong>reset the current resolution</strong> (${selected.status === 'lifted' ? 'Suspension Lifted' : 'Appeal Denied'}) for <strong>${escapeHtml(selected.userName)}</strong> and return this case to <strong>Pending Review</strong>.
           </p>
           <div style="background: #fff7ed; border: 1.5px solid #fed7aa; padding: 10px 14px; border-radius: 8px; margin-bottom: 14px;">
             <div style="font-weight: 700; color: #c2410c; font-size: 0.82rem; margin-bottom: 2px;">CRITICAL CONFIRMATION REQUIRED</div>
@@ -638,45 +684,47 @@ export default function UserAppeals({ isActive }) {
 
     if (!step1.isConfirmed) return;
 
-    // Step 2: Generate 6-digit OTP code and send to admin email
-    const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
-
+    // Step 2: Request backend to generate and email OTP to administrator
     try {
-      await fetch(`${API_URL}/admin/appeals/${selected._id}/request-reevaluate-otp`, {
+      const otpRes = await fetch(`${API_URL}/admin/appeals/${selected._id}/request-reevaluate-otp`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email: adminEmail, otp: generatedOtp })
-      }).catch(() => {});
-    } catch (e) {}
+        }
+      });
 
-    // Show toast hint with the OTP code for testing / dev convenience
-    styledSwal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'info',
-      title: `OTP sent to ${adminEmail}`,
-      html: `Verification Code: <strong style="font-size: 1.1rem; color: #FF5F00; letter-spacing: 2px;">${generatedOtp}</strong>`,
-      showConfirmButton: false,
-      timer: 8000,
-      timerProgressBar: true
-    });
+      if (!otpRes.ok) {
+        const errData = await otpRes.json().catch(() => ({}));
+        styledSwal.fire({
+          title: 'OTP Request Failed',
+          text: errData.message || 'Could not send verification OTP. Please try again.',
+          icon: 'error'
+        });
+        return;
+      }
+    } catch (e) {
+      styledSwal.fire({
+        title: 'Network Error',
+        text: 'Unable to request verification OTP. Please check your network connection.',
+        icon: 'error'
+      });
+      return;
+    }
 
-    // Step 3: Enter and verify 6-digit OTP
+    // Step 3: Enter 6-digit OTP received in email
     const step2 = await styledSwal.fire({
       title: 'Enter Email OTP',
       html: `
         <div style="text-align: left; font-size: 0.88rem; line-height: 1.5; color: #444;">
           <p style="margin-bottom: 8px;">
-            A 6-digit security code has been sent to your administrator email:
+            A 6-digit security verification code has been sent to your administrator email:
           </p>
           <div style="background: var(--bg2); padding: 8px 12px; border-radius: 8px; font-weight: 700; color: var(--brand); font-family: monospace; font-size: 0.95rem; margin-bottom: 12px; word-break: break-all; text-align: center;">
-            ${adminEmail}
+            ${escapeHtml(adminEmail)}
           </div>
           <p style="font-size: 0.78rem; color: var(--muted); margin-bottom: 4px;">
-            Enter the 6-digit verification code below to confirm re-evaluation:
+            Enter the 6-digit verification code from your email to confirm re-evaluation:
           </p>
         </div>
       `,
@@ -698,63 +746,76 @@ export default function UserAppeals({ isActive }) {
           styledSwal.showValidationMessage('Please enter a complete 6-digit OTP code.');
           return false;
         }
-        if (otpValue.trim() !== generatedOtp) {
-          styledSwal.showValidationMessage(`Invalid OTP code. (Hint: ${generatedOtp})`);
-          return false;
-        }
-        return true;
+        return otpValue.trim();
       }
     });
 
-    if (!step2.isConfirmed) return;
+    if (!step2.isConfirmed || !step2.value) return;
 
-    // Step 4: Security verified -> execute re-evaluation
+    // Step 4: Submit OTP code to backend for verification and re-evaluation
     const dateStr = new Date().toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
     const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
     const sysMessage = {
       _id: 'sys-' + Date.now(),
       senderRole: 'system',
-      body: `Appeal re-opened for re-evaluation by Administrator (${adminEmail}) following two-factor security verification ("CONFIRM" + OTP) on ${dateStr} at ${timeStr}.`,
+      body: `Appeal re-opened for re-evaluation by Administrator (${adminEmail}) following two-factor security verification on ${dateStr} at ${timeStr}.`,
       createdAt: new Date().toISOString()
     };
 
-    // Attempt backend update
     try {
-      await fetch(`${API_URL}/admin/appeals/${selected._id}/reopen`, {
+      const reopenRes = await fetch(`${API_URL}/admin/appeals/${selected._id}/reopen`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json'
-        }
-      }).catch(() => {});
-    } catch (e) {}
+        },
+        body: JSON.stringify({ code: step2.value })
+      });
 
-    // Update local state and localStorage
-    setAppeals(prev => prev.map(item => {
-      if (item._id === selected._id) {
-        return {
-          ...item,
-          status: 'pending',
-          hasUnreadAdmin: true,
-          updatedAt: new Date().toISOString(),
-          messages: [...(item.messages || []), sysMessage]
-        };
+      if (!reopenRes.ok) {
+        const errData = await reopenRes.json().catch(() => ({}));
+        styledSwal.fire({
+          title: 'Verification Failed',
+          text: errData.message || 'Invalid OTP code or failed to reopen appeal.',
+          icon: 'error'
+        });
+        return;
       }
-      return item;
-    }));
 
-    styledSwal.fire({
-      title: 'Re-evaluation Confirmed!',
-      html: `
-        <div style="font-size: 0.9rem; color: #444; line-height: 1.5;">
-          The appeal for <strong>${selected.userName}</strong> has been successfully verified and returned to <strong>Pending Review</strong> status.
-        </div>
-      `,
-      icon: 'success',
-      timer: 3000,
-      showConfirmButton: false
-    });
+      // Update local state and localStorage on success
+      setAppeals(prev => prev.map(item => {
+        if (item._id === selected._id) {
+          return {
+            ...item,
+            status: 'pending',
+            hasUnreadAdmin: true,
+            updatedAt: new Date().toISOString(),
+            messages: [...(item.messages || []), sysMessage]
+          };
+        }
+        return item;
+      }));
+
+      styledSwal.fire({
+        title: 'Re-evaluation Confirmed!',
+        html: `
+          <div style="font-size: 0.9rem; color: #444; line-height: 1.5;">
+            The appeal for <strong>${escapeHtml(selected.userName)}</strong> has been successfully verified and returned to <strong>Pending Review</strong> status.
+          </div>
+        `,
+        icon: 'success',
+        timer: 3000,
+        showConfirmButton: false
+      });
+    } catch (err) {
+      console.error('Failed to reopen appeal:', err);
+      styledSwal.fire({
+        title: 'Network Error',
+        text: 'Unable to connect to server. Please check your network connection.',
+        icon: 'error'
+      });
+    }
   };
 
   const pendingCount = appeals.filter(a => a.status === 'pending').length;

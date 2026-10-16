@@ -5,6 +5,16 @@ import { AuthContext } from '../context/AuthContext'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
+const escapeHtml = (str) => {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+};
+
 // Sample drivers matching Screenshot 1 for fallback / preview
 const SAMPLE_DRIVERS = [
   { id: 'DR-0012', name: 'Marco Santos', initials: 'MS', trips: 48, rate: '96%', rating: '4.9', status: 'Online', motorcycleBrand: 'Honda', plateNumber: 'TMX' },
@@ -249,7 +259,7 @@ export default function Drivers({ isActive }) {
       const { value: reason, isConfirmed } = await Swal.fire({
         title: 'Permanent Suspension',
         html: `
-          <p style="margin-bottom: 15px; color: #555;">Are you sure you want to permanently suspend ${account.name}? This action is unappealable.</p>
+          <p style="margin-bottom: 15px; color: #555;">Are you sure you want to permanently suspend ${escapeHtml(account.name)}? This action is unappealable.</p>
           <textarea id="swal-input-reason" class="swal2-textarea" placeholder="Enter reason for permanent suspension..." rows="3"></textarea>
         `,
         icon: 'warning',
