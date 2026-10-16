@@ -760,7 +760,7 @@ tbody tr:hover{background:var(--brand-ll);}
   box-shadow: 0 2px 8px rgba(250, 117, 40, 0.25);
 }
 
-.content:has(.flagged-container) {
+.content:has(.page.active .flagged-container) {
   overflow: hidden !important;
 }
 
@@ -958,7 +958,7 @@ tbody tr:hover{background:var(--brand-ll);}
 /* Force .content to NEVER scroll when viewing appeals or messages */
 .content.appeals-view,
 .content.messages-view,
-.content:has(.msg-layout) {
+.content.no-scroll {
   overflow: hidden !important;
   padding: 16px 28px !important;
   display: flex !important;
@@ -969,8 +969,7 @@ tbody tr:hover{background:var(--brand-ll);}
 }
 
 .page.appeals-page-container.active,
-.page.messages-page-container.active,
-.page:has(.msg-layout).active {
+.page.messages-page-container.active {
   height: 100% !important;
   max-height: 100% !important;
   flex: 1 !important;

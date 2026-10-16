@@ -92,11 +92,11 @@ export default function Drivers({ isActive }) {
     return () => window.removeEventListener('click', handleOutsideClick);
   }, []);
 
-  // Lock outer main content container scroll when viewing flagged accounts
+  // Lock outer main content container scroll when viewing flagged or suspended accounts while active
   useEffect(() => {
     const contentEl = document.querySelector('.content');
     if (!contentEl) return;
-    if (viewMode === 'flagged') {
+    if (isActive && (viewMode === 'flagged' || viewMode === 'suspended')) {
       contentEl.style.overflow = 'hidden';
     } else {
       contentEl.style.overflow = '';
@@ -104,7 +104,7 @@ export default function Drivers({ isActive }) {
     return () => {
       contentEl.style.overflow = '';
     };
-  }, [viewMode]);
+  }, [viewMode, isActive]);
 
   useEffect(() => {
     if (!isActive) return;

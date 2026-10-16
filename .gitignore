@@ -34,3 +34,5 @@ draft/
 *.txt
 
 .env
+
+*.pdf
