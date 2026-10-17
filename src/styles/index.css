@@ -238,6 +238,8 @@ tbody tr:hover{background:var(--brand-ll);}
 .btn{padding:8px 18px;border-radius:9px;font-family:inherit;font-size:0.83rem;font-weight:600;cursor:pointer;border:none;transition:all .18s;}
 .btn-primary{background:var(--brand);color:white;box-shadow:0 3px 12px rgba(250,117,40,.3);}
 .btn-primary:hover{background:var(--brand-d);}
+.btn-danger{background:var(--red);color:white;box-shadow:0 3px 12px rgba(239,68,68,.3);}
+.btn-danger:hover{background:#dc2626;}
 .btn-outline{background:var(--white);color:var(--muted);border:1.5px solid var(--border);}
 .btn-outline:hover{border-color:var(--red);color:var(--red);}
 .btn-ghost{background:var(--bg);color:var(--muted);}
@@ -729,13 +731,88 @@ tbody tr:hover{background:var(--brand-ll);}
   margin-left: 6px;
 }
 
-/* ── SWAL OVERRIDES ── */
+/* ── SWAL OVERRIDES & SYSTEM STYLING ── */
 .swal-actions-gap { gap: 14px; }
 
 /* Fix sweetalert z-index for login/otp screens */
 .swal2-container {
   z-index: 99999 !important;
 }
+
+.swal2-popup {
+  font-family: inherit !important;
+  border-radius: 18px !important;
+  border: 1.5px solid var(--border-l) !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12) !important;
+  padding: 26px 28px !important;
+  background: var(--white) !important;
+  color: var(--text) !important;
+}
+
+.swal2-title {
+  font-family: inherit !important;
+  font-size: 1.25rem !important;
+  font-weight: 800 !important;
+  color: var(--text) !important;
+  padding: 0 0 10px 0 !important;
+}
+
+.swal2-html-container {
+  font-family: inherit !important;
+  font-size: 0.88rem !important;
+  color: var(--muted) !important;
+  margin: 0 !important;
+  padding: 0 0 12px 0 !important;
+  overflow: visible !important;
+}
+
+.swal2-input,
+.swal2-textarea {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  margin: 8px 0 0 0 !important;
+  padding: 11px 14px !important;
+  border-radius: 10px !important;
+  border: 1.5px solid var(--border) !important;
+  background: var(--bg) !important;
+  font-family: inherit !important;
+  font-size: 0.88rem !important;
+  color: var(--text) !important;
+  outline: none !important;
+  box-shadow: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.swal2-textarea {
+  resize: vertical !important;
+  min-height: 85px !important;
+  line-height: 1.5 !important;
+}
+
+.swal2-input:focus,
+.swal2-textarea:focus {
+  border-color: var(--brand) !important;
+  background: var(--white) !important;
+  box-shadow: 0 0 0 3px rgba(250, 117, 40, 0.15) !important;
+}
+
+.swal2-textarea::placeholder,
+.swal2-input::placeholder {
+  color: var(--subtle) !important;
+  opacity: 0.8 !important;
+}
+
+.swal2-validation-message {
+  background: var(--red-l) !important;
+  color: var(--red) !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  margin: 12px 0 0 0 !important;
+  padding: 8px 12px !important;
+}
+
 
 /* ── FLAGGED ACCOUNTS ── */
 .btn-flagged {

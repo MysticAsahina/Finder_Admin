@@ -5,6 +5,17 @@ import { AuthContext } from '../context/AuthContext'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
+const styledSwal = Swal.mixin({
+  customClass: {
+    confirmButton: 'btn btn-primary',
+    cancelButton: 'btn btn-outline',
+    actions: 'swal-actions-gap'
+  },
+  buttonsStyling: false,
+  background: 'var(--white)',
+  color: 'var(--text)'
+});
+
 const escapeHtml = (str) => {
   if (!str) return '';
   return String(str)
@@ -215,22 +226,31 @@ export default function Drivers({ isActive }) {
     if (actionType === 'Clear Flag') {
       backendAction = 'clear';
     } else if (actionType === 'Temporary Suspension') {
-      const { value: reason, isConfirmed } = await Swal.fire({
+      const { value: reason, isConfirmed } = await styledSwal.fire({
         title: 'Temporary Suspension (3 Days)',
         html: `
-          <p style="margin-bottom: 12px; font-size: 14px; color: #555; text-align: left;">
-            This account will be temporarily suspended for a fixed duration of <strong>3 days</strong>.
-          </p>
-          <p style="margin-bottom: 8px; font-size: 14px; color: #555; text-align: left;">Reason for suspension:</p>
-          <textarea id="swal-input-reason" class="swal2-textarea" placeholder="Enter reason here..." rows="3" style="width: 100%; box-sizing: border-box;"></textarea>
+          <div style="text-align: left;">
+            <div style="background: var(--bg2); border: 1.5px solid var(--border-l); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-weight: 700; color: var(--text); font-size: 0.9rem;">${escapeHtml(account.name)}</span>
+              <span class="badge ${account.role === 'Driver' ? 'blue' : 'brand'}" style="text-transform: uppercase; font-size: 0.68rem; font-weight: 700;">${escapeHtml(account.role)}</span>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--muted); line-height: 1.45; margin-bottom: 14px;">
+              This account will be temporarily suspended for a fixed duration of <strong style="color: var(--text);">3 days</strong>.
+            </p>
+            <label for="swal-input-reason" style="display: block; font-size: 0.73rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 6px;">
+              Reason for suspension <span style="color: var(--red);">*</span>
+            </label>
+            <textarea id="swal-input-reason" class="swal2-textarea" placeholder="Enter reason for temporary suspension..." rows="3"></textarea>
+          </div>
         `,
         focusConfirm: false,
         showCancelButton: true,
         confirmButtonText: 'Suspend for 3 Days',
+        cancelButtonText: 'Cancel',
         preConfirm: () => {
-          const r = document.getElementById('swal-input-reason').value;
+          const r = document.getElementById('swal-input-reason')?.value;
           if (!r || !r.trim()) {
-            Swal.showValidationMessage('Please enter a reason');
+            Swal.showValidationMessage('Please enter a reason for suspension');
             return false;
           }
           return r.trim();
@@ -240,16 +260,34 @@ export default function Drivers({ isActive }) {
       backendAction = 'temp_suspend';
       payload = { durationDays: 3, reason: reason };
     } else if (actionType === 'Suspend Until Resolved') {
-      const { value: reason, isConfirmed } = await Swal.fire({
+      const { value: reason, isConfirmed } = await styledSwal.fire({
         title: 'Suspend Until Resolved',
-        text: 'Enter reason for suspension:',
-        input: 'textarea',
-        inputPlaceholder: 'Enter reason here...',
+        html: `
+          <div style="text-align: left;">
+            <div style="background: var(--bg2); border: 1.5px solid var(--border-l); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-weight: 700; color: var(--text); font-size: 0.9rem;">${escapeHtml(account.name)}</span>
+              <span class="badge ${account.role === 'Driver' ? 'blue' : 'brand'}" style="text-transform: uppercase; font-size: 0.68rem; font-weight: 700;">${escapeHtml(account.role)}</span>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--muted); line-height: 1.45; margin-bottom: 14px;">
+              This account will remain suspended indefinitely until the flagged issue is officially resolved or appealed.
+            </p>
+            <label for="swal-input-reason" style="display: block; font-size: 0.73rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 6px;">
+              Reason for suspension <span style="color: var(--red);">*</span>
+            </label>
+            <textarea id="swal-input-reason" class="swal2-textarea" placeholder="Enter reason for suspension..." rows="3"></textarea>
+          </div>
+        `,
+        focusConfirm: false,
         showCancelButton: true,
-        inputValidator: (value) => {
-          if (!value || !value.trim()) {
-            return 'Please enter a reason';
+        confirmButtonText: 'Suspend Account',
+        cancelButtonText: 'Cancel',
+        preConfirm: () => {
+          const r = document.getElementById('swal-input-reason')?.value;
+          if (!r || !r.trim()) {
+            Swal.showValidationMessage('Please enter a reason for suspension');
+            return false;
           }
+          return r.trim();
         }
       });
       if (!isConfirmed || !reason) return;
@@ -259,17 +297,37 @@ export default function Drivers({ isActive }) {
       const { value: reason, isConfirmed } = await Swal.fire({
         title: 'Permanent Suspension',
         html: `
-          <p style="margin-bottom: 15px; color: #555;">Are you sure you want to permanently suspend ${escapeHtml(account.name)}? This action is unappealable.</p>
-          <textarea id="swal-input-reason" class="swal2-textarea" placeholder="Enter reason for permanent suspension..." rows="3"></textarea>
+          <div style="text-align: left;">
+            <div style="background: var(--red-l); border: 1.5px solid #fecaca; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-weight: 700; color: var(--red); font-size: 0.9rem;">${escapeHtml(account.name)}</span>
+              <span class="badge red" style="text-transform: uppercase; font-size: 0.68rem; font-weight: 700;">${escapeHtml(account.role)}</span>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--muted); line-height: 1.45; margin-bottom: 14px;">
+              Are you sure you want to permanently suspend ${escapeHtml(account.name)}? <strong style="color: var(--red);">This action is unappealable.</strong>
+            </p>
+            <label for="swal-input-reason" style="display: block; font-size: 0.73rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 6px;">
+              Reason for permanent suspension <span style="color: var(--red);">*</span>
+            </label>
+            <textarea id="swal-input-reason" class="swal2-textarea" placeholder="Enter reason for permanent suspension..." rows="3"></textarea>
+          </div>
         `,
         icon: 'warning',
+        focusConfirm: false,
         showCancelButton: true,
-        confirmButtonColor: '#d33',
+        customClass: {
+          confirmButton: 'btn btn-danger',
+          cancelButton: 'btn btn-outline',
+          actions: 'swal-actions-gap'
+        },
+        buttonsStyling: false,
+        background: 'var(--white)',
+        color: 'var(--text)',
         confirmButtonText: 'Yes, permanently suspend',
+        cancelButtonText: 'Cancel',
         preConfirm: () => {
-          const r = document.getElementById('swal-input-reason').value;
-          if (!r.trim()) {
-            Swal.showValidationMessage('Please enter a reason');
+          const r = document.getElementById('swal-input-reason')?.value;
+          if (!r || !r.trim()) {
+            Swal.showValidationMessage('Please enter a reason for permanent suspension');
             return false;
           }
           return r.trim();
@@ -298,7 +356,7 @@ export default function Drivers({ isActive }) {
 
       if (actionType === 'Clear Flag') {
         setFlaggedAccounts(prev => prev.filter(a => a.id !== account.id));
-        Swal.fire({ title: 'Flag Cleared', text: `Flag for ${account.name} has been removed.`, icon: 'success', timer: 1800, showConfirmButton: false });
+        styledSwal.fire({ title: 'Flag Cleared', text: `Flag for ${account.name} has been removed.`, icon: 'success', timer: 1800, showConfirmButton: false });
       } else {
         setFlaggedAccounts(prev => prev.filter(a => a.id !== account.id));
         setSuspendedAccounts(prev => [{
@@ -311,26 +369,27 @@ export default function Drivers({ isActive }) {
         }, ...prev]);
 
         if (actionType === 'Temporary Suspension') {
-          Swal.fire({ title: 'Temporarily Suspended', text: `${account.name} has been suspended for ${payload.durationDays} days.`, icon: 'warning', timer: 2000, showConfirmButton: false });
+          styledSwal.fire({ title: 'Temporarily Suspended', text: `${account.name} has been suspended for ${payload.durationDays} days.`, icon: 'warning', timer: 2000, showConfirmButton: false });
         } else if (actionType === 'Suspend Until Resolved') {
-          Swal.fire({ title: 'Suspended Until Resolved', text: `${account.name} has been suspended indefinitely until resolved.`, icon: 'warning', timer: 2000, showConfirmButton: false });
+          styledSwal.fire({ title: 'Suspended Until Resolved', text: `${account.name} has been suspended indefinitely until resolved.`, icon: 'warning', timer: 2000, showConfirmButton: false });
         } else if (actionType === 'Permanent Suspension') {
-          Swal.fire({ title: 'Permanently Suspended', text: `${account.name} has been permanently banned.`, icon: 'error', timer: 2000, showConfirmButton: false });
+          styledSwal.fire({ title: 'Permanently Suspended', text: `${account.name} has been permanently banned.`, icon: 'error', timer: 2000, showConfirmButton: false });
         }
       }
     } catch (e) {
       console.error(e);
-      Swal.fire({ title: 'Error', text: 'Failed to apply action.', icon: 'error' });
+      styledSwal.fire({ title: 'Error', text: 'Failed to apply action.', icon: 'error' });
     }
   };
 
   const handleLiftSuspension = async (account) => {
-    const { isConfirmed } = await Swal.fire({
+    const { isConfirmed } = await styledSwal.fire({
       title: 'Lift Suspension',
       text: `Are you sure you want to lift the suspension for ${account.name}?`,
       icon: 'question',
       showCancelButton: true,
-      confirmButtonText: 'Yes, lift it'
+      confirmButtonText: 'Yes, lift it',
+      cancelButtonText: 'Cancel'
     });
 
     if (!isConfirmed) return;
@@ -346,10 +405,10 @@ export default function Drivers({ isActive }) {
       if (!res.ok) throw new Error('Failed to lift suspension');
       
       setSuspendedAccounts(prev => prev.filter(a => a.id !== account.id));
-      Swal.fire({ title: 'Suspension Lifted', text: `${account.name}'s account has been restored.`, icon: 'success', timer: 2000, showConfirmButton: false });
+      styledSwal.fire({ title: 'Suspension Lifted', text: `${account.name}'s account has been restored.`, icon: 'success', timer: 2000, showConfirmButton: false });
     } catch (e) {
       console.error(e);
-      Swal.fire({ title: 'Error', text: 'Failed to lift suspension.', icon: 'error' });
+      styledSwal.fire({ title: 'Error', text: 'Failed to lift suspension.', icon: 'error' });
     }
   };
 
