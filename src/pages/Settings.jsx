@@ -287,8 +287,16 @@ export default function Settings() {
                         <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 6px;">Confirm New Password</label>
                         <input id="swal-confirm-password" type="password" class="swal2-input" placeholder="Confirm new password" style="margin: 0; width: 100%; box-sizing: border-box; font-size: 0.95rem;" autocomplete="new-password" />
                     </div>
-                    <div style="font-size: 0.75rem; color: var(--muted); line-height: 1.4; background: var(--bg); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-l);">
-                        Password must be 8-128 characters and include uppercase, lowercase, number, and special character.
+                    <div style="font-size: 0.75rem; background: var(--bg); padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-l);">
+                        <div style="font-weight: 700; color: var(--text); margin-bottom: 6px;">Password Requirements:</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 0.73rem;">
+                            <div id="rule-len" style="color: var(--muted); display: flex; align-items: center; gap: 6px;"><span class="rule-icon">•</span> 8–128 characters</div>
+                            <div id="rule-upper" style="color: var(--muted); display: flex; align-items: center; gap: 6px;"><span class="rule-icon">•</span> One uppercase (A–Z)</div>
+                            <div id="rule-lower" style="color: var(--muted); display: flex; align-items: center; gap: 6px;"><span class="rule-icon">•</span> One lowercase (a–z)</div>
+                            <div id="rule-num" style="color: var(--muted); display: flex; align-items: center; gap: 6px;"><span class="rule-icon">•</span> One number (0–9)</div>
+                            <div id="rule-special" style="color: var(--muted); display: flex; align-items: center; gap: 6px;"><span class="rule-icon">•</span> One special char</div>
+                            <div id="rule-match" style="color: var(--muted); display: flex; align-items: center; gap: 6px;"><span class="rule-icon">•</span> Passwords match</div>
+                        </div>
                     </div>
                 </div>
             `,
@@ -299,6 +307,32 @@ export default function Settings() {
             didOpen: () => {
                 const input = document.getElementById('swal-current-password');
                 if (input) input.focus();
+
+                const newPwdInput = document.getElementById('swal-new-password');
+                const confPwdInput = document.getElementById('swal-confirm-password');
+
+                const updateRules = () => {
+                    const pwd = newPwdInput?.value || '';
+                    const conf = confPwdInput?.value || '';
+                    const rules = {
+                        'rule-len': pwd.length >= 8 && pwd.length <= 128,
+                        'rule-upper': /(?=.*[A-Z])/.test(pwd),
+                        'rule-lower': /(?=.*[a-z])/.test(pwd),
+                        'rule-num': /(?=.*\d)/.test(pwd),
+                        'rule-special': /(?=.*[^A-Za-z0-9])/.test(pwd),
+                        'rule-match': pwd.length > 0 && conf.length > 0 && pwd === conf,
+                    };
+                    Object.entries(rules).forEach(([id, ok]) => {
+                        const el = document.getElementById(id);
+                        if (!el) return;
+                        el.style.color = ok ? 'var(--green, #16A34A)' : 'var(--muted)';
+                        const icon = el.querySelector('.rule-icon');
+                        if (icon) icon.textContent = ok ? '✓' : '•';
+                    });
+                };
+
+                newPwdInput?.addEventListener('input', updateRules);
+                confPwdInput?.addEventListener('input', updateRules);
             },
             preConfirm: () => {
                 const currentPassword = document.getElementById('swal-current-password')?.value || '';
