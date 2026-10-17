@@ -68,7 +68,7 @@ export default function LoginPage({ onLogin }) {
 
         <div className="login-card">
           <div className="logo-text" style={{ fontSize: '2.2rem', marginBottom: 40, display: 'block', textAlign: 'center' }}>
-            FOUND<span>ER</span>
+            FIND<span>ER</span>
           </div>
 
           <div className="login-welcome">
